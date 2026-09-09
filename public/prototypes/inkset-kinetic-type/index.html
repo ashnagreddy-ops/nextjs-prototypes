@@ -1,0 +1,979 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Inkset Kinetic Type</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,100..900&display=swap">
+
+<style>
+/* ═══════════════════════════════════════════════════════════════════
+   INKSET — tactile kinetic typography
+   All tunable values live in the two blocks below.
+   ═══════════════════════════════════════════════════════════════════ */
+
+:root {
+  /* ── SURFACE ─────────────────────────────────────────────────── */
+  --ink:        #08070B;   /* flat deep ink-black, faint violet bias */
+  --paper:      #EDECF2;   /* primary text                          */
+  --paper-dim:  #7E7D8C;   /* secondary text                        */
+  --rule:       #1B1A24;   /* hairlines                             */
+  --accent:     #5E54F0;   /* ONLY on interactive / kinetic elements */
+
+  /* ── GRAIN ───────────────────────────────────────────────────── */
+  --grain-opacity: 0.065;  /* 0.05–0.08 is the usable range         */
+  --grain-tile:    220px;  /* noise tile size; smaller = finer      */
+  --grain-fps:     0.7s;   /* full cycle of the 8-step shift        */
+
+  /* ══ MOTION TIMING — tweak here ═══════════════════════════════ */
+
+  /* 1 · STAGGER-DROP */
+  --drop-dur:      620ms;  /* per-letter travel time                */
+  --drop-stagger:   40ms;  /* delay added per letter (30–50ms)      */
+  --drop-rise:    0.42em;  /* how far above rest each letter starts */
+
+  /* 2 · PRESS-AND-SETTLE */
+  --press-scale:    0.95;  /* depth of the press                    */
+  --press-dur:      90ms;  /* time to reach the pressed state       */
+  --settle-dur:    420ms;  /* spring-back, incl. overshoot          */
+
+  /* 3 · FLEX-ON-HOVER */
+  --flex-dur:      180ms;
+  --flex-wght-rest: 440;   /* variable font weight axis, at rest    */
+  --flex-wght-hov:  720;   /* …and on hover / focus                 */
+
+  /* 4 · SNAP-TRANSITION */
+  --snap-dur:      200ms;  /* panel wipe                            */
+  --snap-ind-dur:  190ms;  /* indicator travel                      */
+  --ease-snap:     cubic-bezier(0.2, 0.9, 0.1, 1);
+
+  /* Damped spring, ζ = 0.55 · ωₙ = 18 rad/s. Peaks at 1.124 (≈12%
+     overshoot) around 32% of the duration, then settles. Fallback
+     is a plain back-out curve for engines without linear().        */
+  --ease-spring:   cubic-bezier(0.34, 1.42, 0.5, 1);
+}
+
+@supports (animation-timing-function: linear(0, 1)) {
+  :root {
+    --ease-spring: linear(
+      0, 0.194 6.5%, 0.559 12.9%, 0.875 19.4%, 1.061 25.8%,
+      1.124 32.3%, 1.111 38.7%, 1.066 45.2%, 1.024 51.6%,
+      0.996 58.1%, 0.985 64.5%, 0.985 71%, 0.99 77.4%,
+      0.996 83.9%, 1.002 96.8%, 1
+    );
+  }
+}
+
+/* ── Base ──────────────────────────────────────────────────────── */
+
+* { box-sizing: border-box; }
+
+html { color-scheme: dark; }
+
+body {
+  margin: 0;
+  background: var(--ink);
+  color: var(--paper);
+  font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  font-variation-settings: 'opsz' 18, 'wght' 400;
+  font-feature-settings: 'cv05' 1, 'ss03' 1;
+  -webkit-font-smoothing: antialiased;
+  line-height: 1.55;
+}
+
+/* Film grain: fixed overlay, stepped position shift for the flicker */
+.grain {
+  position: fixed;
+  inset: -50%;
+  z-index: 200;
+  pointer-events: none;
+  opacity: var(--grain-opacity);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: var(--grain-tile) var(--grain-tile);
+  animation: grain-shift var(--grain-fps) steps(1) infinite;
+}
+@keyframes grain-shift {
+  0%   { transform: translate(0, 0); }
+  12%  { transform: translate(-3%, 2%); }
+  25%  { transform: translate(2%, -4%); }
+  37%  { transform: translate(-1%, 3%); }
+  50%  { transform: translate(4%, 1%); }
+  62%  { transform: translate(-4%, -2%); }
+  75%  { transform: translate(1%, 4%); }
+  87%  { transform: translate(3%, -1%); }
+}
+
+.wrap {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 0 clamp(20px, 5vw, 48px);
+}
+
+::selection { background: var(--accent); color: var(--ink); }
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+
+/* Shared label style for eyebrows / column heads */
+.label {
+  font-variation-settings: 'opsz' 14, 'wght' 560;
+  font-size: 11px;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: var(--paper-dim);
+}
+
+/* ── Header ────────────────────────────────────────────────────── */
+
+.masthead {
+  display: flex;
+  align-items: center;
+  gap: 20px 32px;
+  flex-wrap: wrap;
+  padding: 26px 0 24px;
+  border-bottom: 1px solid var(--rule);
+}
+
+.mark {
+  font-variation-settings: 'opsz' 20, 'wght' 800;
+  font-size: 15px;
+  letter-spacing: -0.02em;
+  margin-right: auto;
+}
+.mark span { color: var(--paper-dim); font-variation-settings: 'wght' 400; }
+
+.nav { display: flex; gap: 26px; align-items: center; }
+
+/* ── PRIMITIVE 3 · FLEX-ON-HOVER ───────────────────────────────
+   The variable weight axis animates; colour never changes. A
+   hidden bold ghost in the same grid cell reserves the widest
+   width so the surrounding layout never shifts.               */
+.flex-link {
+  display: inline-grid;
+  justify-items: start;
+  font-size: 14px;
+  text-decoration: none;
+  color: var(--paper);
+  background: none;
+  border: 0;
+  padding: 2px 0;
+  font-family: inherit;
+  cursor: pointer;
+}
+.flex-link::after {
+  content: attr(data-label);
+  grid-area: 1 / 1;
+  height: 0;
+  overflow: hidden;
+  visibility: hidden;
+  font-variation-settings: 'opsz' 16, 'wght' var(--flex-wght-hov);
+  letter-spacing: -0.018em;
+}
+.flex-link > span {
+  grid-area: 1 / 1;
+  font-variation-settings: 'opsz' 16, 'wght' var(--flex-wght-rest);
+  letter-spacing: 0;
+  transition:
+    font-variation-settings var(--flex-dur) ease-out,
+    letter-spacing var(--flex-dur) ease-out;
+}
+.flex-link:hover > span,
+.flex-link:focus-visible > span {
+  font-variation-settings: 'opsz' 16, 'wght' var(--flex-wght-hov);
+  letter-spacing: -0.018em;
+}
+
+/* Sound toggle — interactive, so the accent is allowed here */
+.sound {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  padding: 7px 13px 7px 10px;
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  background: none;
+  color: var(--paper-dim);
+  font-family: inherit;
+  font-size: 11px;
+  font-variation-settings: 'opsz' 14, 'wght' 560;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: border-color 160ms ease-out, color 160ms ease-out;
+}
+.sound:hover { border-color: #2C2A3A; }
+.sound[aria-pressed="true"] { color: var(--paper); border-color: var(--accent); }
+
+.sound-bars { display: flex; align-items: flex-end; gap: 2px; height: 11px; }
+.sound-bars i {
+  display: block;
+  width: 2px;
+  background: currentColor;
+  border-radius: 1px;
+  transition: height 180ms var(--ease-snap), background-color 160ms ease-out;
+}
+.sound-bars i:nth-child(1) { height: 3px; }
+.sound-bars i:nth-child(2) { height: 3px; }
+.sound-bars i:nth-child(3) { height: 3px; }
+.sound[aria-pressed="true"] .sound-bars i { background: var(--accent); }
+.sound[aria-pressed="true"] .sound-bars i:nth-child(1) { height: 5px; }
+.sound[aria-pressed="true"] .sound-bars i:nth-child(2) { height: 11px; }
+.sound[aria-pressed="true"] .sound-bars i:nth-child(3) { height: 7px; }
+
+/* ── Hero ──────────────────────────────────────────────────────── */
+
+.hero { padding: clamp(56px, 11vw, 104px) 0 clamp(48px, 8vw, 76px); }
+
+.hero .label { display: block; margin-bottom: clamp(20px, 4vw, 34px); }
+
+h1 {
+  margin: 0;
+  font-size: clamp(3.1rem, 12.5vw, 7.4rem);
+  font-variation-settings: 'opsz' 32, 'wght' 830;
+  letter-spacing: -0.045em;
+  line-height: 0.92;
+  text-wrap: balance;
+}
+
+/* ── PRIMITIVE 1 · STAGGER-DROP ────────────────────────────────
+   Letters rest in their final position by default, so the page
+   is readable before (and without) JS. Adding .is-dropping
+   replays the keyframe; `backwards` fill holds each letter
+   off-stage through its own delay.                            */
+.word { display: inline-block; }
+.letter { display: inline-block; will-change: transform; }
+
+.is-dropping .letter {
+  animation: stagger-drop var(--drop-dur) var(--ease-spring) backwards;
+  animation-delay: calc(var(--i) * var(--drop-stagger));
+}
+@keyframes stagger-drop {
+  from { transform: translateY(calc(var(--drop-rise) * -1)); opacity: 0; }
+  10%  { opacity: 1; }
+  to   { transform: translateY(0); opacity: 1; }
+}
+
+.deck {
+  margin: clamp(26px, 4vw, 38px) 0 0;
+  max-width: 54ch;
+  font-size: clamp(15px, 1.6vw, 17px);
+  font-variation-settings: 'opsz' 18, 'wght' 370;
+  color: var(--paper-dim);
+  text-wrap: pretty;
+}
+.deck b {
+  color: var(--paper);
+  font-variation-settings: 'opsz' 18, 'wght' 560;
+}
+
+/* ── Section scaffolding ───────────────────────────────────────── */
+
+.section { padding: clamp(44px, 7vw, 68px) 0; border-top: 1px solid var(--rule); }
+
+.section-head {
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+  margin-bottom: 30px;
+}
+.section-head h2 {
+  margin: 0;
+  font-size: 15px;
+  font-variation-settings: 'opsz' 18, 'wght' 620;
+  letter-spacing: -0.01em;
+}
+.section-head .idx {
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  color: var(--paper-dim);
+  font-variation-settings: 'opsz' 14, 'wght' 500;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── PRIMITIVE 4 · SNAP-TRANSITION (the tab component itself) ─── */
+
+.tabs {
+  position: relative;
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--rule);
+}
+.tab {
+  position: relative;
+  appearance: none;
+  background: none;
+  border: 0;
+  padding: 11px 15px;
+  font-family: inherit;
+  font-size: 13px;
+  color: var(--paper-dim);
+  cursor: pointer;
+  transition: color 160ms ease-out;
+  display: inline-grid;
+  justify-items: center;
+}
+/* Tabs flex on hover too — same primitive, reused */
+.tab::after {
+  content: attr(data-label);
+  grid-area: 1 / 1;
+  height: 0;
+  overflow: hidden;
+  visibility: hidden;
+  font-variation-settings: 'opsz' 16, 'wght' var(--flex-wght-hov);
+}
+.tab > span {
+  grid-area: 1 / 1;
+  font-variation-settings: 'opsz' 16, 'wght' var(--flex-wght-rest);
+  transition: font-variation-settings var(--flex-dur) ease-out;
+}
+.tab:hover > span { font-variation-settings: 'opsz' 16, 'wght' var(--flex-wght-hov); }
+.tab:hover { color: var(--paper); }
+.tab[aria-selected="true"] { color: var(--paper); }
+.tab[aria-selected="true"] > span { font-variation-settings: 'opsz' 16, 'wght' var(--flex-wght-hov); }
+
+.tab-indicator {
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  height: 2px;
+  background: var(--accent);
+  width: var(--ind-w, 0px);
+  transform: translateX(var(--ind-x, 0px));
+  transition:
+    transform var(--snap-ind-dur) var(--ease-snap),
+    width var(--snap-ind-dur) var(--ease-snap);
+}
+
+.panels { padding-top: 30px; }
+.panel[hidden] { display: none; }
+
+/* The snap: a clipped wipe with a short travel — never a fade */
+.panel.is-snapping { animation: snap-in var(--snap-dur) var(--ease-snap); }
+@keyframes snap-in {
+  from { clip-path: inset(0 0 100% 0); transform: translateY(7px); }
+  to   { clip-path: inset(0 0 0 0);    transform: translateY(0); }
+}
+
+.panel-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 260px);
+  gap: clamp(24px, 5vw, 56px);
+  align-items: start;
+}
+@media (max-width: 720px) {
+  .panel-grid { grid-template-columns: minmax(0, 1fr); }
+}
+
+.stage {
+  min-height: 132px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 22px;
+}
+
+.note {
+  margin: 0;
+  font-size: 13.5px;
+  font-variation-settings: 'opsz' 16, 'wght' 370;
+  color: var(--paper-dim);
+  text-wrap: pretty;
+}
+.note code {
+  font-family: inherit;
+  font-variation-settings: 'opsz' 16, 'wght' 560;
+  color: var(--paper);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Drop demo word — the rule beneath it is kinetic, so it takes accent */
+.drop-demo { display: inline-block; }
+.drop-demo .line {
+  font-size: clamp(2rem, 6.4vw, 3.4rem);
+  font-variation-settings: 'opsz' 32, 'wght' 780;
+  letter-spacing: -0.04em;
+  line-height: 1.02;
+}
+.drop-rule {
+  height: 2px;
+  background: var(--accent);
+  transform-origin: left;
+  transform: scaleX(1);
+  margin-top: 10px;
+}
+.is-dropping .drop-rule {
+  animation: rule-wipe var(--snap-dur) var(--ease-snap) 260ms backwards;
+}
+@keyframes rule-wipe { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+
+/* ── PRIMITIVE 2 · PRESS-AND-SETTLE ────────────────────────────
+   .is-pressed drops to --press-scale quickly; on release
+   .is-settling runs the overshoot keyframe back to 1.        */
+.btn {
+  appearance: none;
+  font-family: inherit;
+  font-size: 13px;
+  font-variation-settings: 'opsz' 16, 'wght' 600;
+  letter-spacing: 0.005em;
+  padding: 11px 20px;
+  border-radius: 3px;
+  cursor: pointer;
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: #08070B;
+  transform: scale(1);
+  will-change: transform;
+}
+.btn--ghost { background: none; color: var(--paper); }
+
+.btn.is-pressed {
+  transform: scale(var(--press-scale));
+  transition: transform var(--press-dur) cubic-bezier(0.3, 0, 0.5, 1);
+}
+.btn.is-settling { animation: press-settle var(--settle-dur) cubic-bezier(0.22, 0.61, 0.36, 1); }
+@keyframes press-settle {
+  0%   { transform: scale(var(--press-scale)); }
+  40%  { transform: scale(1.028); }   /* overshoot */
+  68%  { transform: scale(0.993); }   /* undershoot */
+  86%  { transform: scale(1.003); }
+  100% { transform: scale(1); }
+}
+
+.row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+.row--links { gap: 30px; }
+.row--links .flex-link { font-size: clamp(19px, 3.2vw, 25px); }
+
+/* Side rail inside each panel */
+.rail { border-left: 1px solid var(--rule); padding-left: 20px; }
+.rail dl { margin: 0; display: grid; gap: 12px; }
+.rail dt {
+  font-size: 10.5px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--paper-dim);
+  font-variation-settings: 'opsz' 14, 'wght' 560;
+}
+.rail dd {
+  margin: 3px 0 0;
+  font-size: 13px;
+  font-variation-settings: 'opsz' 16, 'wght' 480;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Timing table ──────────────────────────────────────────────── */
+
+.table-scroll { overflow-x: auto; }
+table {
+  width: 100%;
+  min-width: 600px;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+th {
+  text-align: left;
+  padding: 0 18px 11px 0;
+  font-size: 10.5px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--paper-dim);
+  font-variation-settings: 'opsz' 14, 'wght' 560;
+  border-bottom: 1px solid var(--rule);
+  white-space: nowrap;
+}
+td {
+  padding: 15px 18px 15px 0;
+  font-size: 13px;
+  font-variation-settings: 'opsz' 16, 'wght' 400;
+  color: var(--paper-dim);
+  border-bottom: 1px solid var(--rule);
+  vertical-align: top;
+}
+td:first-child {
+  color: var(--paper);
+  font-variation-settings: 'opsz' 16, 'wght' 620;
+  white-space: nowrap;
+}
+tr:last-child td { border-bottom: 0; }
+
+.colophon {
+  padding: 30px 0 60px;
+  border-top: 1px solid var(--rule);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 28px;
+  font-size: 11.5px;
+  color: var(--paper-dim);
+  font-variation-settings: 'opsz' 14, 'wght' 400;
+}
+.colophon span { font-variant-numeric: tabular-nums; }
+
+/* ── Reduced motion ────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .grain { animation: none; }
+  .is-dropping .letter,
+  .is-dropping .drop-rule,
+  .panel.is-snapping,
+  .btn.is-settling { animation: none; }
+  .btn.is-pressed { transition: none; }
+  .tab-indicator,
+  .flex-link > span,
+  .tab > span,
+  .sound-bars i { transition-duration: 1ms; }
+}
+</style>
+</head>
+<body>
+
+<div class="grain" aria-hidden="true"></div>
+
+<div class="wrap">
+
+  <header class="masthead">
+    <div class="mark">INKSET <span>/ kinetic type</span></div>
+
+    <nav class="nav" aria-label="Sections">
+      <a class="flex-link" href="#primitives" data-label="Primitives"><span>Primitives</span></a>
+      <a class="flex-link" href="#timing" data-label="Timing"><span>Timing</span></a>
+      <button class="flex-link" id="replay" type="button" data-label="Replay"><span>Replay</span></button>
+    </nav>
+
+    <button class="sound" id="sound-toggle" type="button" aria-pressed="false">
+      <span class="sound-bars" aria-hidden="true"><i></i><i></i><i></i></span>
+      <span id="sound-state">Sound off</span>
+    </button>
+  </header>
+
+  <section class="hero">
+    <span class="label">Motion language · v0.1 · four primitives</span>
+    <h1 id="headline">Type that lands</h1>
+    <p class="deck">
+      Every element on this page moves on one of four primitives — <b>stagger-drop</b>,
+      <b>press-and-settle</b>, <b>flex-on-hover</b>, <b>snap-transition</b>. Nothing fades.
+      Weight is the only thing that changes on hover; the accent is reserved for surfaces
+      that respond to touch. Turn sound on to hear the mechanical layer.
+    </p>
+  </section>
+
+  <section class="section" id="primitives">
+    <div class="section-head">
+      <span class="idx">01 — 03</span>
+      <h2>Primitives, live</h2>
+      <span class="note" style="margin-left:auto">Tab switching is primitive 04.</span>
+    </div>
+
+    <div class="tabs" role="tablist" id="tablist" aria-label="Kinetic primitives">
+      <button class="tab" role="tab" id="tab-drop" aria-controls="panel-drop"
+              aria-selected="true" data-label="Stagger-drop"><span>Stagger-drop</span></button>
+      <button class="tab" role="tab" id="tab-press" aria-controls="panel-press"
+              aria-selected="false" tabindex="-1" data-label="Press & settle"><span>Press &amp; settle</span></button>
+      <button class="tab" role="tab" id="tab-flex" aria-controls="panel-flex"
+              aria-selected="false" tabindex="-1" data-label="Flex on hover"><span>Flex on hover</span></button>
+      <div class="tab-indicator" aria-hidden="true"></div>
+    </div>
+
+    <div class="panels">
+
+      <div class="panel" role="tabpanel" id="panel-drop" aria-labelledby="tab-drop">
+        <div class="panel-grid">
+          <div class="stage">
+            <div class="drop-demo">
+              <div class="line" id="drop-word">Settle</div>
+              <div class="drop-rule"></div>
+            </div>
+            <div class="row">
+              <button class="btn" data-press data-drop-target="drop-word">Run the drop</button>
+            </div>
+          </div>
+          <div class="rail">
+            <dl>
+              <dt>Travel</dt><dd>620 ms per letter</dd>
+              <dt>Stagger</dt><dd>40 ms</dd>
+              <dt>Curve</dt><dd>spring · ζ 0.55 · ωₙ 18 rad/s</dd>
+              <dt>Overshoot</dt><dd>12.4% at t 0.32</dd>
+            </dl>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel" role="tabpanel" id="panel-press" aria-labelledby="tab-press" hidden>
+        <div class="panel-grid">
+          <div class="stage">
+            <p class="note">
+              Hold either button down. It sits at <code>0.95</code> for as long as you hold,
+              then springs past <code>1.028</code> on release before settling.
+            </p>
+            <div class="row">
+              <button class="btn" data-press>Commit change</button>
+              <button class="btn btn--ghost" data-press>Discard</button>
+            </div>
+          </div>
+          <div class="rail">
+            <dl>
+              <dt>Press depth</dt><dd>scale 0.95</dd>
+              <dt>Press in</dt><dd>90 ms</dd>
+              <dt>Settle</dt><dd>420 ms</dd>
+              <dt>Path</dt><dd>0.95 → 1.028 → 0.993 → 1</dd>
+            </dl>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel" role="tabpanel" id="panel-flex" aria-labelledby="tab-flex" hidden>
+        <div class="panel-grid">
+          <div class="stage">
+            <p class="note">
+              Hover these. Only the variable weight axis moves — no colour, no underline.
+              A hidden bold ghost reserves the wider measure, so the row never reflows.
+            </p>
+            <div class="row row--links">
+              <a class="flex-link" href="#primitives" data-label="Letterform"><span>Letterform</span></a>
+              <a class="flex-link" href="#primitives" data-label="Counter"><span>Counter</span></a>
+              <a class="flex-link" href="#primitives" data-label="Baseline"><span>Baseline</span></a>
+            </div>
+          </div>
+          <div class="rail">
+            <dl>
+              <dt>Axis</dt><dd>wght 440 → 720</dd>
+              <dt>Duration</dt><dd>180 ms</dd>
+              <dt>Curve</dt><dd>ease-out</dd>
+              <dt>Tracking</dt><dd>0 → −0.018 em</dd>
+            </dl>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <section class="section" id="timing">
+    <div class="section-head">
+      <span class="idx">Spec</span>
+      <h2>Timing table</h2>
+    </div>
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>Primitive</th><th>Trigger</th><th>Duration</th><th>Easing</th><th>Sound</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Stagger-drop</td>
+            <td>Load, replay</td>
+            <td>620 ms + 40 ms / letter</td>
+            <td>Spring, ζ 0.55 · ωₙ 18 rad/s</td>
+            <td>Tick, every 2nd letter</td>
+          </tr>
+          <tr>
+            <td>Press &amp; settle</td>
+            <td>pointerdown → pointerup</td>
+            <td>90 ms in, 420 ms out</td>
+            <td>Overshoot 1.028, undershoot 0.993</td>
+            <td>Click, on press</td>
+          </tr>
+          <tr>
+            <td>Flex on hover</td>
+            <td>pointerenter, focus</td>
+            <td>180 ms</td>
+            <td>ease-out</td>
+            <td>None</td>
+          </tr>
+          <tr>
+            <td>Snap transition</td>
+            <td>Tab select</td>
+            <td>200 ms wipe, 190 ms rail</td>
+            <td>cubic-bezier(.2, .9, .1, 1)</td>
+            <td>Thunk, on swap</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <footer class="colophon">
+    <span>Inter variable · opsz 14–32 · wght 100–900</span>
+    <span>Grain: fractal noise, <span id="grain-readout">6.5</span>% over #08070B</span>
+    <span>Accent #5E54F0 — interactive surfaces only</span>
+  </footer>
+
+</div>
+
+<script>
+(() => {
+  'use strict';
+
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
+  const cssMs = (name, el = document.documentElement) =>
+    parseFloat(getComputedStyle(el).getPropertyValue(name)) || 0;
+
+  /* ═══ SOUND ═══════════════════════════════════════════════════
+     Synthesised with oscillators + a shared noise buffer. Muted
+     by default; the AudioContext is only created once the user
+     switches sound on, which doubles as the unlock gesture.    */
+
+  const audio = {
+    ctx: null,
+    bus: null,
+    noise: null,
+    on: false,
+
+    init() {
+      if (this.ctx) return;
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return;
+      this.ctx = new AC();
+      this.bus = this.ctx.createGain();
+      this.bus.gain.value = 0.9;
+      this.bus.connect(this.ctx.destination);
+
+      const len = Math.floor(this.ctx.sampleRate * 0.4);
+      this.noise = this.ctx.createBuffer(1, len, this.ctx.sampleRate);
+      const d = this.noise.getChannelData(0);
+      for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+    },
+
+    burst(freq, q, peak, decay, type = 'bandpass') {
+      const t = this.ctx.currentTime;
+      const src = this.ctx.createBufferSource();
+      src.buffer = this.noise;
+      src.playbackRate.value = 0.9 + Math.random() * 0.2;
+      const filt = this.ctx.createBiquadFilter();
+      filt.type = type;
+      filt.frequency.value = freq;
+      filt.Q.value = q;
+      const g = this.ctx.createGain();
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(peak, t + 0.001);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + decay);
+      src.connect(filt).connect(g).connect(this.bus);
+      src.start(t);
+      src.stop(t + decay + 0.02);
+    },
+
+    tone(f0, f1, peak, decay, type = 'triangle') {
+      const t = this.ctx.currentTime;
+      const o = this.ctx.createOscillator();
+      o.type = type;
+      o.frequency.setValueAtTime(f0, t);
+      o.frequency.exponentialRampToValueAtTime(f1, t + decay);
+      const g = this.ctx.createGain();
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(peak, t + 0.004);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + decay);
+      o.connect(g).connect(this.bus);
+      o.start(t);
+      o.stop(t + decay + 0.02);
+    },
+
+    /* Dry mechanical click — pairs with press-and-settle */
+    click() {
+      if (!this.on || !this.ctx) return;
+      this.burst(2300, 1.1, 0.30, 0.035);
+      this.tone(1500, 780, 0.055, 0.030);
+    },
+
+    /* Light tick — one per landing letter */
+    tick() {
+      if (!this.on || !this.ctx) return;
+      this.burst(4200, 1.6, 0.075, 0.016);
+    },
+
+    /* Low thunk — pairs with the snap transition */
+    thunk() {
+      if (!this.on || !this.ctx) return;
+      this.tone(165, 62, 0.26, 0.11, 'sine');
+      this.burst(360, 0.7, 0.10, 0.045, 'lowpass');
+    }
+  };
+
+  const soundBtn = document.getElementById('sound-toggle');
+  const soundState = document.getElementById('sound-state');
+
+  soundBtn.addEventListener('click', () => {
+    audio.init();
+    if (audio.ctx && audio.ctx.state === 'suspended') audio.ctx.resume();
+    audio.on = !audio.on;
+    soundBtn.setAttribute('aria-pressed', String(audio.on));
+    soundState.textContent = audio.on ? 'Sound on' : 'Sound off';
+    if (audio.on) audio.click();
+  });
+
+  /* ═══ PRIMITIVE 1 · STAGGER-DROP ══════════════════════════════ */
+
+  function splitLetters(el) {
+    if (el.dataset.split) return;
+    const words = el.textContent.trim().split(/\s+/);
+    el.textContent = '';
+    let i = 0;
+    words.forEach((word, w) => {
+      const wrap = document.createElement('span');
+      wrap.className = 'word';
+      for (const ch of word) {
+        const s = document.createElement('span');
+        s.className = 'letter';
+        s.style.setProperty('--i', i);
+        s.textContent = ch;
+        wrap.appendChild(s);
+        i++;
+      }
+      el.appendChild(wrap);
+      if (w < words.length - 1) el.appendChild(document.createTextNode(' '));
+    });
+    el.dataset.split = '1';
+    el.dataset.count = i;
+  }
+
+  function drop(el) {
+    splitLetters(el);
+    if (reduced.matches) { audio.click(); return; }
+
+    const host = el.closest('.drop-demo') || el;
+    host.classList.remove('is-dropping');
+    void host.offsetWidth;                       // force reflow to restart
+    host.classList.add('is-dropping');
+
+    // Tick on every other letter — one per 40ms would read as a buzz
+    const n = Number(el.dataset.count);
+    const stagger = cssMs('--drop-stagger');
+    const settle = cssMs('--drop-dur') * 0.32;   // when the letter peaks
+    for (let i = 0; i < n; i += 2) {
+      setTimeout(() => audio.tick(), i * stagger + settle);
+    }
+    setTimeout(() => audio.click(), (n - 1) * stagger + settle + 40);
+
+    const letters = el.querySelectorAll('.letter');
+    const last = letters[letters.length - 1];
+    host.addEventListener('animationend', function done(e) {
+      if (e.target !== last) return;                 // ignore earlier letters + the rule wipe
+      host.classList.remove('is-dropping');
+      host.removeEventListener('animationend', done);
+    });
+  }
+
+  const headline = document.getElementById('headline');
+  splitLetters(headline);
+
+  /* ═══ PRIMITIVE 2 · PRESS-AND-SETTLE ══════════════════════════ */
+
+  function press(btn) {
+    btn.classList.remove('is-settling');
+    btn.classList.add('is-pressed');
+    audio.click();
+  }
+  function release(btn) {
+    if (!btn.classList.contains('is-pressed')) return;
+    btn.classList.remove('is-pressed');
+    btn.classList.add('is-settling');
+    btn.addEventListener('animationend', () => btn.classList.remove('is-settling'), { once: true });
+  }
+
+  document.querySelectorAll('[data-press], .sound, .tab').forEach(btn => {
+    btn.addEventListener('pointerdown', () => press(btn));
+    btn.addEventListener('pointerup', () => release(btn));
+    btn.addEventListener('pointerleave', () => release(btn));
+    btn.addEventListener('pointercancel', () => release(btn));
+    btn.addEventListener('keydown', e => {
+      if ((e.key === 'Enter' || e.key === ' ') && !e.repeat) press(btn);
+    });
+    btn.addEventListener('keyup', e => {
+      if (e.key === 'Enter' || e.key === ' ') release(btn);
+    });
+  });
+
+  // Buttons wired to re-run a drop
+  document.querySelectorAll('[data-drop-target]').forEach(btn => {
+    btn.addEventListener('click', () => drop(document.getElementById(btn.dataset.dropTarget)));
+  });
+
+  document.getElementById('replay').addEventListener('click', () => {
+    drop(headline);
+    window.scrollTo({ top: 0, behavior: reduced.matches ? 'auto' : 'smooth' });
+  });
+
+  /* ═══ PRIMITIVE 4 · SNAP-TRANSITION ═══════════════════════════ */
+
+  const tablist = document.getElementById('tablist');
+  const tabs = [...tablist.querySelectorAll('.tab')];
+  const indicator = tablist.querySelector('.tab-indicator');
+
+  function moveIndicator(tab) {
+    tablist.style.setProperty('--ind-x', tab.offsetLeft + 'px');
+    tablist.style.setProperty('--ind-w', tab.offsetWidth + 'px');
+  }
+
+  function select(tab, { silent = false } = {}) {
+    tabs.forEach(t => {
+      const isOn = t === tab;
+      t.setAttribute('aria-selected', String(isOn));
+      t.tabIndex = isOn ? 0 : -1;
+      const panel = document.getElementById(t.getAttribute('aria-controls'));
+      panel.hidden = !isOn;
+      panel.classList.remove('is-snapping');
+    });
+
+    const panel = document.getElementById(tab.getAttribute('aria-controls'));
+    moveIndicator(tab);
+
+    if (!silent) {
+      void panel.offsetWidth;
+      panel.classList.add('is-snapping');
+      panel.addEventListener('animationend', () => panel.classList.remove('is-snapping'), { once: true });
+      audio.thunk();
+    }
+  }
+
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      if (tab.getAttribute('aria-selected') === 'true') return;
+      select(tab);
+    });
+    tab.addEventListener('keydown', e => {
+      const i = tabs.indexOf(tab);
+      let next = null;
+      if (e.key === 'ArrowRight') next = tabs[(i + 1) % tabs.length];
+      if (e.key === 'ArrowLeft') next = tabs[(i - 1 + tabs.length) % tabs.length];
+      if (e.key === 'Home') next = tabs[0];
+      if (e.key === 'End') next = tabs[tabs.length - 1];
+      if (!next) return;
+      e.preventDefault();
+      select(next);
+      next.focus();
+    });
+  });
+
+  // Position the rail without animating it on first paint
+  select(tabs[0], { silent: true });
+  window.addEventListener('resize', () => {
+    moveIndicator(tabs.find(t => t.getAttribute('aria-selected') === 'true'));
+  });
+
+  /* ═══ Page-load sequence ══════════════════════════════════════ */
+
+  const start = () => {
+    drop(headline);
+    drop(document.getElementById('drop-word'));
+  };
+
+  if (document.fonts && document.fonts.ready) {
+    // Wait for Inter so letters are measured at their real widths
+    document.fonts.ready.then(() => requestAnimationFrame(() => {
+      moveIndicator(tabs[0]);
+      start();
+    }));
+  } else {
+    requestAnimationFrame(start);
+  }
+
+  document.getElementById('grain-readout').textContent =
+    (parseFloat(getComputedStyle(document.documentElement)
+      .getPropertyValue('--grain-opacity')) * 100).toFixed(1);
+})();
+</script>
+</body>
+</html>
