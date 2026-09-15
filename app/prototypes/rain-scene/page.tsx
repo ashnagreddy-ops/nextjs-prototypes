@@ -1,4 +1,5 @@
 import Image from "next/image"
+import RainAudio from "./RainAudio"
 import RainCanvas from "./RainCanvas"
 
 // Tune the background blur radius here.
@@ -19,6 +20,7 @@ export default function RainScenePage() {
         className="scale-105 object-cover blur-[var(--bg-blur)]"
       />
       <RainCanvas />
+      <RainAudio />
     </div>
   )
 }

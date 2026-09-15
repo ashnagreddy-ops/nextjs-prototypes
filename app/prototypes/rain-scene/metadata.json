@@ -1,8 +1,8 @@
 {
   "title": "Rain Scene",
-  "description": "Blurred rain-on-window background with falling rivulets and a dense field of static clinging droplets, both refracting the image behind them.",
-  "tags": ["background", "canvas", "ambience", "motion"],
+  "description": "Blurred rain-on-window scene with animated rivulets and clinging droplets that refract the image, plus a looping rain ambience track with a mute toggle.",
+  "tags": ["background", "canvas", "ambience", "motion", "audio"],
   "createdAt": "2026-09-11T00:00:00.000Z",
-  "updatedAt": "2026-09-13T03:00:00.000Z",
+  "updatedAt": "2026-09-14T17:00:00.000Z",
   "hidden": false
 }
