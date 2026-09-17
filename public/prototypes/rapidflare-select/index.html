@@ -70,26 +70,31 @@ table{font-family:inherit}
 #frame{width:1280px;height:720px;background:var(--card);border-radius:12px;overflow:hidden;box-shadow:0 1px 2px rgba(21,24,50,.06),0 18px 48px -20px rgba(21,24,50,.28);display:flex;flex-direction:row;position:relative}
 
 /* ---------- side nav ---------- */
-.sidenav{width:250px;flex:none;background:var(--navy);color:#fff;display:flex;flex-direction:column;padding:18px 16px;overflow-y:auto}
-.sidenav::-webkit-scrollbar{width:0}
+.sidenav{width:250px;flex:none;background:var(--navy);color:#fff;display:flex;flex-direction:column;overflow:hidden}
+.sidenav-scroll{flex:1;min-height:0;overflow-y:auto;padding:18px 16px}
+.sidenav-scroll::-webkit-scrollbar{width:0}
+.sidefoot{flex:none;display:flex;align-items:center;gap:9px;padding:12px 16px;border-top:1px solid rgba(255,255,255,.14)}
+.sfavatar{width:28px;height:28px;border-radius:50%;background:rgba(91,95,239,.55);color:#fff;display:flex;align-items:center;justify-content:center;font-size:10.5px;font-weight:700;flex:none}
+.sfname{font-size:12.5px;font-weight:600;color:#fff;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .cust{display:flex;align-items:center;gap:9px;padding:2px 4px 16px;margin-bottom:14px;border-bottom:1px solid rgba(255,255,255,.14)}
-.cust .cav{width:26px;height:26px;border-radius:7px;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex:none}
+.cust .cav{width:22px;height:22px;color:#fff;display:flex;align-items:center;justify-content:center;flex:none}
 .cust .cn{font-size:13.5px;font-weight:600}
+.cust-actions{margin-left:auto;display:flex;align-items:center;gap:2px}
+.cust-ic{width:28px;height:28px;border-radius:7px;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,.85);flex:none}
+.cust-ic:hover{background:rgba(255,255,255,.1);color:#fff}
 .navlist{display:flex;flex-direction:column;gap:2px;margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid rgba(255,255,255,.14)}
 .navitem{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;font-size:13px;color:rgba(255,255,255,.68);text-align:left}
 .navitem .ic{width:16px;height:16px;flex:none;display:flex;align-items:center;justify-content:center}
 .navitem:hover{background:rgba(255,255,255,.06);color:#fff}
 .navitem.active{background:rgba(255,255,255,.12);color:#fff;font-weight:600}
-.newconvo{display:flex;align-items:center;justify-content:center;gap:7px;background:var(--primary);color:var(--primary-foreground);border-radius:9px;padding:10px;font-size:12.5px;font-weight:600;margin-bottom:18px;transition:background var(--duration-base) var(--ease-out)}
-.newconvo:hover{background:var(--primary-hover)}
+.newconvo{display:flex;align-items:center;justify-content:center;gap:7px;background:rgba(91,95,239,.55);color:var(--primary-foreground);border-radius:9px;padding:10px;font-size:12.5px;font-weight:600;margin-bottom:18px;transition:background var(--duration-base) var(--ease-out)}
+.newconvo:hover{background:rgba(91,95,239,.7)}
 .recent-eyebrow{font-size:11px;font-weight:600;color:rgba(255,255,255,.42);margin-bottom:8px}
 .convgroup{margin-bottom:4px}
 .convgroup .gl{font-size:10px;color:rgba(255,255,255,.38);margin:8px 4px 4px}
 .convitem{display:block;width:100%;text-align:left;padding:8px 10px;border-radius:7px;font-size:12.5px;color:rgba(255,255,255,.72);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .convitem:hover{background:rgba(255,255,255,.06);color:#fff}
 .convitem.current{background:rgba(255,255,255,.1);color:#fff}
-.seeall{display:block;text-align:center;font-size:11.5px;color:rgba(255,255,255,.5);padding:10px 0 2px;margin-top:6px}
-.seeall:hover{color:#fff}
 
 /* ---------- main pane / top bar ---------- */
 .mainpane{flex:1;min-width:0;display:flex;flex-direction:column}
@@ -99,14 +104,6 @@ table{font-family:inherit}
 .crumb .sep{color:var(--faint);font-weight:400;margin:0 1px}
 .crumb .agent{color:var(--primary)}
 .crumb .car{width:16px;height:16px;color:var(--faint);margin-left:1px;display:inline-flex}
-.topbar-right{margin-left:auto;display:flex;align-items:center;gap:14px}
-.helpbtn{font-size:12.5px;color:var(--ink-2);font-weight:500}
-.helpbtn:hover{color:var(--primary)}
-.useravatar{width:26px;height:26px;border-radius:50%;border:1.5px solid var(--border);background:var(--muted)}
-.helpmenu{position:absolute;top:48px;right:22px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius-md);box-shadow:var(--shadow-md);padding:6px;min-width:168px;opacity:0;transform:translateY(-6px);pointer-events:none;transition:opacity var(--duration-base) var(--ease-out),transform var(--duration-base) var(--ease-out);z-index:20}
-.helpmenu.open{opacity:1;transform:none;pointer-events:auto}
-.helpmenu button{display:block;width:100%;text-align:left;padding:8px 10px;border-radius:7px;font-size:12.5px;color:var(--ink-2)}
-.helpmenu button:hover{background:var(--muted);color:var(--foreground)}
 
 /* ---------- body ---------- */
 .body{flex:1;display:flex;min-height:0}
@@ -211,6 +208,45 @@ table{font-family:inherit}
 .frow.gone{max-height:0;opacity:0;margin:0;padding:0;border-top-width:0;overflow:hidden;transition:max-height .3s var(--ease),opacity .25s var(--ease),padding .3s var(--ease)}
 .frow.flash{animation:frowflash 1.1s var(--ease)}
 @keyframes frowflash{0%{background:rgba(91,95,239,.1)}100%{background:rgba(91,95,239,0)}}
+/* recalculating state for a filter that depends on another filter just
+   changed — a skeleton sweep instead of any spinner, matching the calm
+   loading language used elsewhere in this prototype */
+.frow.shimmer .fsel{color:transparent;border-color:transparent;background:linear-gradient(90deg,var(--muted) 25%,var(--hairline-2) 37%,var(--muted) 63%);background-size:400% 100%;animation:shimmersweep 1.2s ease-in-out infinite}
+.frow.shimmer .fcar{opacity:0}
+.frow.shimmer .freason{opacity:.4}
+@keyframes shimmersweep{0%{background-position:135% 0}100%{background-position:-35% 0}}
+/* full-response reload — the whole turn-2 answer (text, product strip,
+   table) fades under a skeleton curtain and back, standing in for a
+   response the agent is regenerating against a changed dependency,
+   rather than reloading just the two dependent filter rows */
+.recalcwrap{position:relative}
+/* content and the skeleton curtain are two DIFFERENT classes, toggled
+   sequentially in JS (content fades out and finishes, then the curtain
+   fades in — never both at once) so there's never a moment where old text
+   is legible through the loading state */
+.recalcwrap > .aline,.recalcwrap .pstrip,.recalcwrap .ctable-wrap,.recalcwrap .cnotes{transition:opacity .25s var(--ease)}
+.recalcwrap.content-hidden > .aline,.recalcwrap.content-hidden .pstrip,.recalcwrap.content-hidden .ctable-wrap,.recalcwrap.content-hidden .cnotes{opacity:0}
+/* the feedback-icon/timestamp row sits after recalcwrap (it must stay the
+   very last element in the turn), so it's faded by the same class name
+   applied directly to it rather than via a recalcwrap-descendant selector */
+.mrow{transition:opacity .25s var(--ease)}
+.mrow.content-hidden{opacity:0}
+.reload-overlay{position:absolute;inset:0;z-index:2;display:flex;flex-direction:column;gap:12px;padding-top:2px;background:var(--card);opacity:0;pointer-events:none;transition:opacity .25s var(--ease)}
+.reload-overlay.show{opacity:1;pointer-events:auto}
+/* a paragraph added *after* the reload (the recalc confirmation) starts
+   genuinely collapsed — not just opacity:0 — so it reserves no space while
+   waiting to appear; without this, the invisible-but-still-there paragraph
+   pushes whatever follows it (the feedback icons) down by its own height,
+   reading as inconsistent spacing during the loading phase. JS sets an
+   explicit max-height at reveal time since a max-height transition can't
+   target "auto." */
+.recalc-collapse{max-height:0;opacity:0;overflow:hidden;margin:0;transition:max-height .45s var(--ease),opacity .35s var(--ease),margin .45s var(--ease)}
+.recalc-collapse.in{opacity:1;margin:0 0 10px}
+.skel-line,.skel-card,.skel-table{border-radius:var(--radius-sm);background:linear-gradient(90deg,var(--muted) 25%,var(--hairline-2) 37%,var(--muted) 63%);background-size:400% 100%;animation:shimmersweep 1.4s ease-in-out infinite}
+.skel-line{height:11px}
+.skel-cards{display:flex;gap:10px}
+.skel-card{flex:1;height:58px}
+.skel-table{height:92px}
 
 /* product card strip */
 .pstrip{margin-bottom:14px}
@@ -330,46 +366,49 @@ table{font-family:inherit}
   <div id="scaler">
     <div id="frame">
       <div class="sidenav">
-        <div class="cust"><span class="cav">H</span><span class="cn">Helios Aerial Systems</span></div>
-        <div class="navlist">
-          <button class="navitem active"><span class="ic"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-2.6 6.1 8.5 8.5 0 0 1-6 2.4 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8 8.5 8.5 0 0 1 2.4-6A8.4 8.4 0 0 1 12.5 3h.5a8 8 0 0 1 8 8v.5Z"/></svg></span>Conversations</button>
-          <button class="navitem"><span class="ic"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6M9 13h6M9 17h6M9 9h1"/></svg></span>Notes</button>
-          <button class="navitem"><span class="ic"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 2 9 5-9 5-9-5 9-5Z"/><path d="m3 12 9 5 9-5"/><path d="m3 17 9 5 9-5"/></svg></span>Collections</button>
+        <div class="sidenav-scroll">
+          <div class="cust">
+            <span class="cav"><svg viewBox="0 0 24 24" width="17" height="17" fill="currentColor"><circle cx="12" cy="12" r="3.6"/><path d="M12 0.8 15 7.4 9 7.4Z"/><path d="M12 23.2 9 16.6 15 16.6Z"/><path d="M23.2 12 16.6 15 16.6 9Z"/><path d="M0.8 12 7.4 9 7.4 15Z"/></svg></span>
+            <span class="cn">Helios</span>
+            <div class="cust-actions">
+              <button class="cust-ic" title="Search"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m20 20-4-4"/></svg></button>
+              <button class="cust-ic" title="New conversation"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.4 2.6a2 2 0 1 1 2.8 2.8L12 14l-4 1 1-4Z"/></svg></button>
+            </div>
+          </div>
+          <div class="navlist">
+            <button class="navitem active"><span class="ic"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-2.6 6.1 8.5 8.5 0 0 1-6 2.4 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8 8.5 8.5 0 0 1 2.4-6A8.4 8.4 0 0 1 12.5 3h.5a8 8 0 0 1 8 8v.5Z"/></svg></span>Conversations</button>
+            <button class="navitem"><span class="ic"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6M9 13h6M9 17h6M9 9h1"/></svg></span>Notes</button>
+            <button class="navitem"><span class="ic"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 2 9 5-9 5-9-5 9-5Z"/><path d="m3 12 9 5 9-5"/><path d="m3 17 9 5 9-5"/></svg></span>Collections</button>
+          </div>
+          <button class="newconvo"><span style="width:16px;height:16px;display:flex"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></span>New Conversation</button>
+          <div class="recent-eyebrow">Recent Conversations</div>
+          <div class="convgroup">
+            <div class="gl">Today</div>
+            <button class="convitem current">Omnidirectional antenna, drone</button>
+          </div>
+          <div class="convgroup">
+            <div class="gl">Yesterday</div>
+            <button class="convitem">Buck converter, 12&nbsp;V rail 3&nbsp;A</button>
+            <button class="convitem">BLE module for EU compliance</button>
+            <button class="convitem">Compact desktop CPU boards</button>
+          </div>
+          <div class="convgroup">
+            <div class="gl">Older</div>
+            <button class="convitem">Isolated CAN transceiver</button>
+            <button class="convitem">u.FL vs SMA connector options</button>
+            <button class="convitem">GNSS antenna ground plane specs</button>
+            <button class="convitem">NanoCore vs Raspberry Pi compute</button>
+            <button class="convitem">Power supply thermal derating</button>
+          </div>
         </div>
-        <button class="newconvo"><span style="width:16px;height:16px;display:flex"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></span>New Conversation</button>
-        <div class="recent-eyebrow">Recent Conversations</div>
-        <div class="convgroup">
-          <div class="gl">Today</div>
-          <button class="convitem current">Omnidirectional antenna, drone</button>
+        <div class="sidefoot">
+          <span class="sfavatar">SS</span>
+          <span class="sfname">Sam Smith</span>
         </div>
-        <div class="convgroup">
-          <div class="gl">Yesterday</div>
-          <button class="convitem">Buck converter, 12&nbsp;V rail 3&nbsp;A</button>
-          <button class="convitem">BLE module for EU compliance</button>
-          <button class="convitem">Compact desktop CPU boards</button>
-        </div>
-        <div class="convgroup">
-          <div class="gl">Older</div>
-          <button class="convitem">Isolated CAN transceiver</button>
-          <button class="convitem">u.FL vs SMA connector options</button>
-          <button class="convitem">GNSS antenna ground plane specs</button>
-          <button class="convitem">NanoCore vs Raspberry Pi compute</button>
-          <button class="convitem">Power supply thermal derating</button>
-        </div>
-        <button class="seeall">See all</button>
       </div>
       <div class="mainpane">
         <div class="topbar">
           <button class="crumb">Sales Agents<span class="sep">/</span><span class="agent">Rapid Selection Agent</span><span class="car"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></span></button>
-          <div class="topbar-right">
-            <button class="helpbtn" id="helpbtn">Help</button>
-            <span class="useravatar"></span>
-          </div>
-          <div class="helpmenu" id="helpmenu">
-            <button>Documentation</button>
-            <button>Feedback</button>
-            <button>Support</button>
-          </div>
         </div>
         <div class="body">
           <div class="col">
@@ -414,7 +453,7 @@ var TS = [
   "Sep 09, 2026, 9:33 AM (PDT)"
 ];
 
-var STEP_LABELS = ["Landing","Interpretation","Shortlist","Recommend","Reset"];
+var STEP_LABELS = ["Landing","Recalculate","Shortlist","Recommend","Reset"];
 var LAST = 5;
 
 var scroll = document.getElementById('scroll');
@@ -511,8 +550,8 @@ function landing(){
   '</div>';
 }
 
-function userTurn(text, st, id){
-  return '<div class="turn user"' + (st ? ' data-st="' + st + '"' : '') + (id ? ' id="' + id + '"' : '') + '>' +
+function userTurn(text, st, id, extraClass){
+  return '<div class="turn user' + (extraClass ? ' ' + extraClass : '') + '"' + (st ? ' data-st="' + st + '"' : '') + (id ? ' id="' + id + '"' : '') + '>' +
     '<div class="ubub">' + text + '</div></div>';
 }
 
@@ -538,7 +577,7 @@ function runThinking(done){
   at(430, step);
 }
 function question1(n){
-  return '<p class="aline' + (n === 2 ? ' rv' : '') + '"' + (n === 2 ? ' id="q1"' : '') + '>Could you let me know what frequency bands this needs to support, and what connector type your board uses?</p>';
+  return '<p class="aline' + (n === 1 ? ' rv' : '') + '"' + (n === 1 ? ' id="q1"' : '') + '>Could you let me know what frequency bands this needs to support, and what connector type your board uses?</p>';
 }
 
 /* ---------- reasoning block (turn 1 only, collapsed by default) ---------- */
@@ -573,15 +612,14 @@ var FILTERS = [
     value:'Omnidirectional, low-null',
     options:['Omnidirectional, low-null','Omnidirectional','Directional','Any'],
     reason:'You asked for omnidirectional coverage with minimal dead zones.' },
-  { id:'impedance', turn:1, state:'assumed', label:'Impedance', slider:true,
-    value:'50 Ω',
-    options:['75 Ω','50 Ω','Any'],
-    reasons:[
-      'You overrode the standard assumption to 75 Ω.',
-      'Standard across RF and wireless systems — rules out non-standard components.',
-      'You removed the impedance constraint entirely.'
-    ],
-    chatText:{'50 Ω':'50-ohm impedance','75 Ω':'75-ohm impedance','Any':'no fixed impedance'},
+  { id:'impedance', turn:1, state:'assumed', label:'Impedance', slider:true, numeric:true,
+    value:50, min:40, max:100, step:5, unit:'Ω',
+    reasonFn:function(v){
+      if(v === 50) return 'Standard across RF and wireless systems — rules out non-standard components.';
+      if(v > 50) return 'You raised this to ' + v + ' Ω, above the 50 Ω standard.';
+      return 'You lowered this to ' + v + ' Ω, below the 50 Ω standard.';
+    },
+    chatText:function(v){ return v === 50 ? '50-ohm impedance' : v + '-ohm impedance'; },
     bindId:'bind-impedance' },
   { id:'bands', turn:2, state:'stated', label:'Frequency bands',
     value:'LTE, GNSS',
@@ -596,27 +634,34 @@ var FILTERS = [
     options:['Not available','Available','Unknown'],
     reason:'You confirmed no ground plane at the mount point.' }
 ];
-/* Turn 1's filters first appear at state 2, turn 2's at state 3, turn 3's at
+/* Turn 1's filters first appear at state 1 (folded into the combined
+   landing+interpretation state), turn 2's at state 3 (Shortlist — Recalculate
+   sits before it at state 2 and doesn't introduce a new turn), turn 3's at
    state 4 — mirrors the states each turn's agent response lands in. */
-var STATE_FOR_TURN = {1:2, 2:3, 3:4};
+var STATE_FOR_TURN = {1:1, 2:3, 3:4};
 function turnForState(n){
   if(n >= 4) return 3;
-  if(n === 3) return 2;
-  if(n === 2) return 1;
-  return 0;
+  if(n >= 3) return 2;
+  return 1;
 }
 function currentReason(f){
+  if(f.reasonFn) return f.reasonFn(f.value);
   return f.reasons ? f.reasons[f.options.indexOf(f.value)] : f.reason;
+}
+function fvalText(f){
+  return f.numeric ? f.value + ' ' + f.unit : f.value;
 }
 function filterRow(f, isNew){
   var top = '<div class="frow-top"><span class="flabel">' + f.label + '</span>' +
       (f.state === 'assumed' ? '<span class="fassume" title="Assumed — inferred, not stated">' + ico(I.sparkles, 14) + '</span>' : '') +
       '<span class="frow-right">' +
-        (f.slider ? '<span class="fval">' + f.value + '</span>' : '') +
+        (f.slider ? '<span class="fval">' + fvalText(f) + '</span>' : '') +
         '<button class="fx" title="Remove filter">' + ico(I.x, 12) + '</button>' +
       '</span></div>';
   var control;
-  if(f.slider){
+  if(f.slider && f.numeric){
+    control = '<div class="fslwrap"><input type="range" class="frange" data-id="' + f.id + '" min="' + f.min + '" max="' + f.max + '" step="' + f.step + '" value="' + f.value + '"></div>';
+  } else if(f.slider){
     var idx = f.options.indexOf(f.value);
     control = '<div class="fslwrap"><input type="range" class="frange" data-id="' + f.id + '" min="0" max="' + (f.options.length - 1) + '" step="1" value="' + idx + '"></div>';
   } else {
@@ -730,21 +775,31 @@ function render(n){
   infield.classList.remove('hot');
   send.className = 'send';
   send.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M6 11l6-6 6 6"/></svg>';
-  actbar.hidden = n < 2 || n === LAST;
+  /* actbar starts hidden on every fresh entry to state 1 or the reset state
+     (nothing to act on yet, or back to a bare landing screen) — state 1's
+     own animation un-hides it partway through, once the agent actually
+     responds, rather than it being tied to a static per-state check */
+  actbar.hidden = n === 1 || n === LAST;
 
   if(n === 1 || n === LAST){
     scroll.innerHTML = landing();
   } else {
     scroll.innerHTML = '<div class="convwrap">' + buildFull(n) + '</div>';
   }
-  /* panel is closed by default on every fresh state entry — state 2 is the
+  /* panel is closed by default on every fresh state entry — state 1 is the
      only state that opens it itself, partway through its own animation, so
-     jumping straight to 3 or 4 shows it already settled open with no replay
-     of that opening move, and 1/5 never show it at all */
+     jumping straight to 2 or 3 shows it already settled open with no replay
+     of that opening move, and 1(initial)/5 never show it at all */
   filterpanel.classList.add('notransition');
-  filterpanel.classList.toggle('open', n === 3 || n === 4);
+  filterpanel.classList.toggle('open', n === 2 || n === 3 || n === 4);
   void filterpanel.offsetWidth;
   filterpanel.classList.remove('notransition');
+  /* impedance's value is derived from the state, not left as sticky mutable
+     state — before the recalculate state it's always back at the original
+     50 Ω (state 2 itself starts there too, since that's the animation's own
+     starting point), and only n > 2 carries the recalculated 80 Ω forward */
+  var impedanceFilter = FILTERS.filter(function(f){ return f.id === 'impedance'; })[0];
+  if(impedanceFilter) impedanceFilter.value = n > 2 ? 80 : 50;
   filterpanel.innerHTML = filterPanel(n);
   Array.prototype.forEach.call(filterpanel.querySelectorAll('.frange'), updateRangeFill);
 
@@ -757,20 +812,32 @@ function render(n){
 
 function buildFull(n){
   var h = '';
-  h += userTurn(PROMPT1);
+  h += userTurn(PROMPT1, 0, 'ut1', n === 1 ? 'rv' : '');
 
+  /* turn 1's agent response is now part of state 1 itself (landing +
+     interpretation combined into one continuous take), so this block is
+     unconditional — buildFull is never called for n < 1 */
+  h += '<div class="turn aturn" id="turn1">';
+  h += '<div class="agent" id="agent1">';
+  if(n === 1) h += thinkingRow();
+  h += reasoningBlock(1, n === 1);
+  h += '<div class="recalcwrap" id="recalcwrap1">';
+  h += '<p class="aline' + (n === 1 ? ' rv' : '') + '"' + (n === 1 ? ' id="p1"' : '') + '>For an omnidirectional antenna with minimal nulls, the best-performing designs are typically <b>dipole or monopole-style</b>, since they maintain a fuller 360&deg; radiation pattern with fewer dead zones than directional antennas.</p>';
+  h += '<p class="aline' + (n === 1 ? ' rv' : '') + '"' + (n === 1 ? ' id="p2"' : '') + '>I&rsquo;m also assuming standard <b id="bind-impedance">50-ohm impedance</b> for this recommendation, since that&rsquo;s the near-universal standard across RF and wireless systems — this rules out a small number of non-standard components. ' + cite(1) + '</p>';
+  h += '<p class="aline' + (n === 1 ? ' rv' : '') + '"' + (n === 1 ? ' id="p3"' : '') + '>Based on these considerations, the candidate pool narrows from 24 to 20 — still too broad a range for me to recommend specific models with confidence. The remaining spread depends heavily on your frequency bands and connector type, both of which significantly affect which antennas are viable for your setup.</p>';
+  h += question1(n);
+  h += '<div class="reload-overlay" id="reloadOverlay1">' +
+    '<div class="skel-line" style="width:88%"></div>' +
+    '<div class="skel-line" style="width:95%"></div>' +
+    '<div class="skel-line" style="width:63%"></div>' +
+    '<div class="skel-line" style="width:79%"></div>' +
+  '</div>';
+  h += '</div>';
   if(n >= 2){
-    h += '<div class="turn aturn" id="turn1">';
-    h += '<div class="agent" id="agent1">';
-    if(n === 2) h += thinkingRow();
-    h += reasoningBlock(1, n === 2);
-    h += '<p class="aline' + (n === 2 ? ' rv' : '') + '"' + (n === 2 ? ' id="p1"' : '') + '>For an omnidirectional antenna with minimal nulls, the best-performing designs are typically <b>dipole or monopole-style</b>, since they maintain a fuller 360&deg; radiation pattern with fewer dead zones than directional antennas.</p>';
-    h += '<p class="aline' + (n === 2 ? ' rv' : '') + '"' + (n === 2 ? ' id="p2"' : '') + '>I&rsquo;m also assuming standard <b id="bind-impedance">50-ohm impedance</b> for this recommendation, since that&rsquo;s the near-universal standard across RF and wireless systems — this rules out a small number of non-standard components. ' + cite(1) + '</p>';
-    h += '<p class="aline' + (n === 2 ? ' rv' : '') + '"' + (n === 2 ? ' id="p3"' : '') + '>Based on these considerations, the candidate pool narrows from 24 to 20 — still too broad a range for me to recommend specific models with confidence. The remaining spread depends heavily on your frequency bands and connector type, both of which significantly affect which antennas are viable for your setup.</p>';
-    h += question1(n);
-    h += metaRow(TS[0], n === 2 ? 'rv' : '', n === 2 ? ' id="mrow1"' : '');
-    h += '</div></div>';
+    h += '<p class="aline' + (n === 2 ? ' recalc-collapse' : '') + '"' + (n === 2 ? ' data-st="2" data-k="recalc1"' : '') + '>I&rsquo;ve rechecked this against the updated 80&nbsp;&Omega; impedance target — the omnidirectional, low-null pattern requirement is unaffected, and the candidate pool still narrows to 20.</p>';
   }
+  h += metaRow(TS[0], '', (n === 1 ? ' data-st="1" data-k="mrow1"' : '') + ' id="mrow1el"');
+  h += '</div></div>';
 
   if(n >= 3){
     h += userTurn(PROMPT2, n === 3 ? 3 : 0, 'ut2');
@@ -871,24 +938,59 @@ function flashEl(el){
   el.classList.add('flash');
   at(1150, function(){ el.classList.remove('flash'); });
 }
+function flashRow(row){
+  if(!row) return;
+  row.classList.remove('flash');
+  void row.offsetWidth;
+  row.classList.add('flash');
+  at(1150, function(){ row.classList.remove('flash'); });
+}
+/* drives a slider filter's own 'input' event programmatically, in small
+   steps, so a scripted state can visibly slide a filter to a new value the
+   same way a dragged thumb would — reusing the real update path instead of
+   a separate fake animation */
+function animateSliderTo(id, target, dur, done){
+  var input = filterpanel.querySelector('.frange[data-id="' + id + '"]');
+  if(!input){ if(done) done(); return; }
+  var start = +input.value;
+  var steps = Math.max(6, Math.round(dur / 25));
+  var i = 0;
+  function tick(){
+    i++;
+    var t = i / steps;
+    var eased = 1 - Math.pow(1 - t, 3); /* ease-out cubic — glides to a stop instead of a linear snap */
+    var v = Math.round(start + (target - start) * eased);
+    input.value = v;
+    input.dispatchEvent(new CustomEvent('input', { bubbles: true, detail: { silent: i < steps } }));
+    if(i < steps) at(dur / steps, tick);
+    else if(done) done();
+  }
+  tick();
+}
 filterpanel.addEventListener('input', function(e){
   var input = e.target.closest('.frange');
   if(!input) return;
   updateRangeFill(input);
   var f = FILTERS.filter(function(x){ return x.id === input.dataset.id; })[0];
   if(!f) return;
-  f.value = f.options[+input.value];
+  f.value = f.numeric ? +input.value : f.options[+input.value];
   var row = input.closest('.frow');
   var valEl = row.querySelector('.fval');
-  if(valEl) valEl.textContent = f.value;
+  if(valEl) valEl.textContent = fvalText(f);
+  /* scripted mid-slide ticks (e.detail.silent) just update the number as it
+     counts past — the reason/chat-text/flash only fire once, on the tick
+     that settles on the final value, so an auto-driven slide doesn't spam
+     the flash animation a dozen times in a row */
+  if(e.detail && e.detail.silent) return;
   var reasonEl = row.querySelector('.freason-txt');
   if(reasonEl) reasonEl.textContent = currentReason(f);
   flashEl(reasonEl);
-  flashEl(row.querySelector('.fval'));
-  if(f.bindId && f.chatText){
+  flashEl(valEl);
+  if(f.bindId){
     var bound = document.getElementById(f.bindId);
     if(bound){
-      bound.textContent = f.chatText[f.value] || f.value;
+      var text = typeof f.chatText === 'function' ? f.chatText(f.value) : (f.chatText && f.chatText[f.value]) || f.value;
+      bound.textContent = text;
       flashEl(bound);
     }
   }
@@ -973,9 +1075,10 @@ function fire(done){
 /* ---------- per-state animations ---------- */
 var ANIM = {
 
-  /* landing + initiation combined: pause on the suggestion pills, then fade
-     into the typed prompt and its submission — one continuous take instead
-     of a separate "click to type" state */
+  /* landing + interpretation combined: pause on the suggestion pills, fade
+     into the typed prompt and its submission, then continue straight into
+     the agent's first response (thinking → reasoning → paragraphs →
+     question) — one continuous take instead of two separate states */
   1: function(){
     at(1500, function(){
       type(PROMPT1, 1100, function(){
@@ -983,30 +1086,77 @@ var ANIM = {
           var lwrap = scroll.querySelector('.lwrap');
           if(lwrap) lwrap.classList.add('out');
           at(320, function(){
-            scroll.innerHTML = '<div class="convwrap"><div class="turn user rv" id="ut1"><div class="ubub">' + PROMPT1 + '</div></div></div>';
+            scroll.innerHTML = '<div class="convwrap">' + buildFull(1) + '</div>';
             void scroll.offsetHeight;
-            at(30, function(){ show(document.getElementById('ut1')); toBottom(true); });
+            at(30, function(){
+              show(document.getElementById('ut1'));
+              toBottom(true);
+              runThinking(function(){
+                var think = document.getElementById('think');
+                if(think) think.classList.add('out');
+                at(240, function(){
+                  if(think) think.style.display = 'none';
+                  actbar.hidden = false;
+                  show(document.getElementById('rwrap1'));
+                  at(160, toBottom);
+                  at(300, function(){ filterpanel.classList.add('open'); });
+                  at(600, function(){ revealFilterPanel(); toBottom(); });
+                  at(1000, function(){ show(document.getElementById('p1')); toBottom(); });
+                  at(1400, function(){ show(document.getElementById('p2')); toBottom(); });
+                  at(1800, function(){ show(document.getElementById('p3')); toBottom(); });
+                  at(2300, function(){ show(document.getElementById('q1')); toBottom(); });
+                  at(2600, function(){ show(scroll.querySelector('[data-k="mrow1"]')); toBottom(); });
+                });
+              });
+            });
           });
         });
       });
     });
   },
 
+  /* recalculate: now sits right after the first interpretation, before the
+     shortlist exists — so it's turn 1's own filters/response that visibly
+     "reconsider," not turn 2's. Drag impedance to 80 Ω, let Radiation
+     pattern (the only other turn-1 filter) shimmer, then land the agent's
+     own confirmation that the 24→20 narrowing still holds */
   2: function(){
-    runThinking(function(){
-      var think = document.getElementById('think');
-      if(think) think.classList.add('out');
-      at(240, function(){
-        if(think) think.style.display = 'none';
-        show(document.getElementById('rwrap1'));
-        at(160, toBottom);
-        at(300, function(){ filterpanel.classList.add('open'); });
-        at(600, function(){ revealFilterPanel(); toBottom(); });
-        at(1000, function(){ show(document.getElementById('p1')); toBottom(); });
-        at(1400, function(){ show(document.getElementById('p2')); toBottom(); });
-        at(1800, function(){ show(document.getElementById('p3')); toBottom(); });
-        at(2300, function(){ show(document.getElementById('q1')); toBottom(); });
-        at(2600, function(){ show(document.getElementById('mrow1')); toBottom(); });
+    at(500, function(){
+      animateSliderTo('impedance', 80, 950, function(){
+        at(350, function(){
+          var patternRow = document.getElementById('frow-pattern');
+          var wrap = document.getElementById('recalcwrap1');
+          var overlay = document.getElementById('reloadOverlay1');
+          var mrow1 = document.getElementById('mrow1el');
+          /* sequenced, not simultaneous: let the old content fully fade to
+             nothing first, then bring the skeleton in — otherwise the two
+             cross-fade and old text stays legible through the loading state */
+          if(wrap) wrap.classList.add('content-hidden');
+          if(mrow1) mrow1.classList.add('content-hidden');
+          toBottom();
+          at(260, function(){
+            if(overlay) overlay.classList.add('show');
+            if(patternRow) patternRow.classList.add('shimmer');
+            toBottom();
+            /* full response sits under the skeleton curtain for a couple of
+               seconds — long enough to read as "regenerating," not a glitch */
+            at(2300, function(){
+              if(overlay) overlay.classList.remove('show');
+              if(patternRow){ patternRow.classList.remove('shimmer'); }
+              at(260, function(){
+                if(wrap) wrap.classList.remove('content-hidden');
+                if(mrow1) mrow1.classList.remove('content-hidden');
+                if(patternRow) flashRow(patternRow);
+                toBottom();
+                at(300, function(){
+                  var recalc1 = scroll.querySelector('[data-k="recalc1"]');
+                  if(recalc1){ recalc1.style.maxHeight = recalc1.scrollHeight + 'px'; show(recalc1); }
+                  toBottom();
+                });
+              });
+            });
+          });
+        });
       });
     });
   },
@@ -1110,17 +1260,6 @@ function fit(){
   scaler.style.height = (720 * s) + 'px';
 }
 window.addEventListener('resize', fit);
-
-/* ---------- help menu ---------- */
-var helpbtn = document.getElementById('helpbtn');
-var helpmenu = document.getElementById('helpmenu');
-helpbtn.addEventListener('click', function(e){
-  e.stopPropagation();
-  helpmenu.classList.toggle('open');
-});
-document.addEventListener('click', function(e){
-  if(helpmenu.classList.contains('open') && !helpmenu.contains(e.target)){ helpmenu.classList.remove('open'); }
-});
 
 buildSteps();
 fit();

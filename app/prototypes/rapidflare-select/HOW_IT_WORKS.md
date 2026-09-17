@@ -3,7 +3,7 @@
 A prototype of Rapidflare's conversational product-selection agent for electronics/
 semiconductor buyers, built specifically to be screen-recorded. It walks one scripted
 antenna-selection conversation across three user turns through five discrete states
-(landing/initiation, interpretation, shortlist, recommend, reset), each entered by an
+(landing/interpretation, recalculate, shortlist, recommend, reset), each entered by an
 explicit click rather than autoplay, so each state can be recorded in its own clean take.
 
 ## The script
@@ -40,15 +40,45 @@ Inside the file:
 - All five states are produced by one `render(n)` function that rebuilds the
   conversation's HTML from scratch for state `n`, then an `ANIM[n]` entry (a chain of
   `setTimeout`s in a `timers` array, cleared on every `render()` call) drives that
-  state's specific transition. State 1 combines the landing screen and the first
-  prompt's typing/submit animation into one continuous take: it renders the landing
-  pills, pauses, fades them out, then types and fires the first prompt into the input
-  bar (`type()` / `fire()`). States 3 and 4 replay the same typing/submit choreography
-  for the follow-up turns.
+  state's specific transition. State 1 combines the landing screen, the first prompt's
+  typing/submit animation, *and* the agent's full first response into one continuous
+  take: it renders the landing pills, pauses, fades them out, types and fires the first
+  prompt (`type()` / `fire()`), then keeps going straight into the thinking cycle,
+  reasoning reveal, paragraphs, and clarifying question — no separate "click to see the
+  response" step. The docked action bar stays hidden through the landing/typing portion
+  and only un-hides (`actbar.hidden = false`) once the agent's response actually starts
+  appearing. States 3 and 4 replay the same typing/submit choreography for the
+  follow-up turns.
+- Two filters (Radiation pattern, Connector, Frequency bands, Ground plane) render as
+  dropdowns since they're categorical picks; **Impedance** is a true numeric range
+  slider (`slider:true, numeric:true` on its `FILTERS` entry, 40–100 Ω) since it's the
+  one filter with an actual ordinal quality. State 2 ("Recalculate") sits right after
+  the first interpretation and before the shortlist exists, so it demonstrates
+  cross-filter interdependency *within turn 1*: it eases the impedance slider from
+  50→80 Ω via `animateSliderTo()` (an ease-out cubic over ~30 small steps — replaying
+  real `input` events, the same code path a manual drag would hit, not a separate fake
+  animation), shimmers the Radiation pattern row (`.frow.shimmer` — the only other
+  turn-1 filter) and — since the brief calls for the *whole* response looking like it's
+  regenerating, not just the dependent filter — also drops a skeleton curtain
+  (`.recalcwrap`/`.reload-overlay`, ids `recalcwrap1`/`reloadOverlay1`) over turn 1's
+  own paragraphs and clarifying question. They fade under shimmering placeholder lines
+  for about two seconds before fading back to the real content and landing a new agent
+  paragraph (`data-k="recalc1"`) confirming the 24→20 narrowing still holds. That new
+  paragraph starts genuinely collapsed (`.recalc-collapse`: `max-height:0`, not just
+  `opacity:0`) rather than merely invisible, and JS sets an explicit `max-height` at
+  reveal time — otherwise the still-in-the-DOM-but-invisible paragraph would reserve
+  its own height during the loading phase and visibly push the feedback icons down
+  below it, breaking the icon row's normally-consistent spacing from the last visible
+  line. Dragging the impedance slider by hand at any point also live-updates its own
+  reason text and the one place its value is echoed back in the turn-1 agent response
+  (`#bind-impedance`) — the scripted state-2 replay is that same mechanism driven
+  programmatically, not a separate code path. Impedance's value itself is derived from
+  the state number on every render (`n > 2 ? 80 : 50`) rather than left as sticky
+  mutable state, so jumping around the step control can't leave it stuck at 80.
 - A persistent right-hand `.filterpanel` (not inline in the chat) shows the
   cumulative STATED/ASSUMED filters read from the conversation so far; it's closed by
-  width/padding until state 2 opens it partway through its own reveal sequence, and
-  states 3/4 show it already settled open with no replay of that motion.
+  width/padding until state 1 opens it partway through its own reveal sequence, and
+  states 2/3/4 show it already settled open with no replay of that motion.
 - Each agent turn has its own collapsed-by-default reasoning block (`reasoningBlock()`
   / the `REASONING` map, one entry per turn) — a plain, no-background region that caps
   at a fixed height and scrolls internally with a mask-image fade instead of a visible
@@ -59,9 +89,9 @@ Inside the file:
 - Each agent turn ends with a `metaRow()` — a reaction/read-aloud/copy icon row and a
   timestamp — revealed together with the rest of that turn's content rather than
   sitting statically above it. A docked action bar ("Submit an enquiry" / "Request
-  quote" / "Talk to team") only appears once the agent has actually responded (state 2
-  onward, hidden again on the landing-alike reset state), and a "Powered by Rapidflare"
-  footer bar sits outside the scrolling transcript, as in the reference.
+  quote" / "Talk to team") only appears once the agent has actually responded (partway
+  through state 1, hidden again on the landing-alike reset state), and a "Powered by
+  Rapidflare" footer bar sits outside the scrolling transcript, as in the reference.
 
 ## Key files
 
