@@ -6,7 +6,7 @@
 <title>Rapidflare Select</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap">
 <style>
 :root{
   /* paper / ink — the working surface */
@@ -19,48 +19,69 @@
   --hairline-2:#EBEDF1;
   --surface:#FFFFFF;
   --ground:#F5F6F8;
-  /* signal — the agent: reasoning, active states, interaction */
-  --signal:#4A46CC;
-  --signal-d:#3733A0;
-  --tint:#ECEBF9;
-  --tint-2:#F5F5FB;
   /* trace — verified, sourced, measured data (PCB/oscilloscope teal) */
   --trace:#0C8B82;
   --trace-tint:#E1F3F1;
-  /* flag — assumed / estimated, not yet confirmed (tolerance-flag amber) */
-  --flag:#AD6A08;
-  --flag-tint:#FBF1DF;
   /* structural dark surface (sidenav) */
   --navy:#181A29;
   --no:#B23B2E;
   --no-tint:#FBECEA;
+
+  /* ---- v3 design-system tokens ---- */
+  --background:#fbfbfd;
+  --card:#ffffff;
+  --muted:#f4f4f7;
+  --border:#e4e4ea;
+  --foreground:#191a23;
+  --muted-foreground:#6b6d7a;
+
+  --primary:#5b5fef;
+  --primary-hover:#4a4ed9;
+  --primary-subtle:#eef0fd;
+  --primary-foreground:#ffffff;
+
+  --attention:#b45309;
+  --attention-subtle:#fdf1e5;
+
+  --radius-sm:6px;
+  --radius-md:10px;
+  --radius-lg:14px;
+
+  --duration-fast:120ms;
+  --duration-base:180ms;
+  --duration-slow:280ms;
+  --ease-out:cubic-bezier(0.16,1,0.3,1);
+
+  --shadow-sm:0 1px 2px rgba(15,15,20,.04),0 1px 1px rgba(15,15,20,.03);
+  --shadow-md:0 4px 16px rgba(15,15,20,.08),0 2px 6px rgba(15,15,20,.04);
+
   --r:6px;
   --ease:cubic-bezier(.22,.72,.28,1);
 }
 *{box-sizing:border-box}
-body{background:var(--paper);color:var(--ink);font-family:"IBM Plex Sans",ui-sans-serif,system-ui,sans-serif;-webkit-font-smoothing:antialiased;overflow:hidden}
+body{background:var(--background);color:var(--foreground);font-family:"Inter",ui-sans-serif,system-ui,sans-serif;-webkit-font-smoothing:antialiased;overflow:hidden}
 button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
 table{font-family:inherit}
-:focus-visible{outline:2px solid var(--signal);outline-offset:2px}
+:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
 
 /* ---------- stage ---------- */
 #stage{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding-top:16px}
 #scaler{width:1280px;height:720px;transform-origin:top center;flex:none}
-#frame{width:1280px;height:720px;background:var(--surface);border-radius:12px;overflow:hidden;box-shadow:0 1px 2px rgba(21,24,50,.06),0 18px 48px -20px rgba(21,24,50,.28);display:flex;flex-direction:row;position:relative}
+#frame{width:1280px;height:720px;background:var(--card);border-radius:12px;overflow:hidden;box-shadow:0 1px 2px rgba(21,24,50,.06),0 18px 48px -20px rgba(21,24,50,.28);display:flex;flex-direction:row;position:relative}
 
 /* ---------- side nav ---------- */
 .sidenav{width:250px;flex:none;background:var(--navy);color:#fff;display:flex;flex-direction:column;padding:18px 16px;overflow-y:auto}
 .sidenav::-webkit-scrollbar{width:0}
 .cust{display:flex;align-items:center;gap:9px;padding:2px 4px 16px;margin-bottom:14px;border-bottom:1px solid rgba(255,255,255,.14)}
-.cust .cav{width:26px;height:26px;border-radius:7px;background:var(--signal);color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex:none}
+.cust .cav{width:26px;height:26px;border-radius:7px;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex:none}
 .cust .cn{font-size:13.5px;font-weight:600}
 .navlist{display:flex;flex-direction:column;gap:2px;margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid rgba(255,255,255,.14)}
 .navitem{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;font-size:13px;color:rgba(255,255,255,.68);text-align:left}
-.navitem .ic{font-size:13px;width:15px;text-align:center;flex:none}
+.navitem .ic{width:16px;height:16px;flex:none;display:flex;align-items:center;justify-content:center}
 .navitem:hover{background:rgba(255,255,255,.06);color:#fff}
 .navitem.active{background:rgba(255,255,255,.12);color:#fff;font-weight:600}
-.newconvo{display:flex;align-items:center;justify-content:center;gap:7px;background:var(--signal);color:#fff;border-radius:9px;padding:10px;font-size:12.5px;font-weight:600;margin-bottom:18px}
-.newconvo:hover{background:var(--signal-d)}
+.newconvo{display:flex;align-items:center;justify-content:center;gap:7px;background:var(--primary);color:var(--primary-foreground);border-radius:9px;padding:10px;font-size:12.5px;font-weight:600;margin-bottom:18px;transition:background var(--duration-base) var(--ease-out)}
+.newconvo:hover{background:var(--primary-hover)}
 .recent-eyebrow{font-size:11px;font-weight:600;color:rgba(255,255,255,.42);margin-bottom:8px}
 .convgroup{margin-bottom:4px}
 .convgroup .gl{font-size:10px;color:rgba(255,255,255,.38);margin:8px 4px 4px}
@@ -72,37 +93,50 @@ table{font-family:inherit}
 
 /* ---------- main pane / top bar ---------- */
 .mainpane{flex:1;min-width:0;display:flex;flex-direction:column}
-.topbar{height:52px;flex:none;display:flex;align-items:center;padding:0 22px;border-bottom:1px solid var(--hairline-2);position:relative}
-.crumb{display:inline-flex;align-items:center;gap:6px;font-size:13.5px;font-weight:600;color:var(--ink);padding:6px 8px;border-radius:7px}
-.crumb:hover{background:var(--ground)}
+.topbar{height:52px;flex:none;display:flex;align-items:center;padding:0 22px;border-bottom:1px solid var(--border);position:relative}
+.crumb{display:inline-flex;align-items:center;gap:6px;font-size:13.5px;font-weight:600;color:var(--foreground);padding:6px 8px;border-radius:7px}
+.crumb:hover{background:var(--muted)}
 .crumb .sep{color:var(--faint);font-weight:400;margin:0 1px}
-.crumb .agent{color:var(--signal)}
-.crumb .car{font-size:9px;color:var(--faint);margin-left:1px}
+.crumb .agent{color:var(--primary)}
+.crumb .car{width:16px;height:16px;color:var(--faint);margin-left:1px;display:inline-flex}
 .topbar-right{margin-left:auto;display:flex;align-items:center;gap:14px}
 .helpbtn{font-size:12.5px;color:var(--ink-2);font-weight:500}
-.helpbtn:hover{color:var(--signal)}
-.useravatar{width:26px;height:26px;border-radius:50%;border:1.5px solid var(--hairline);background:var(--ground)}
-.helpmenu{position:absolute;top:48px;right:22px;background:var(--surface);border:1px solid var(--hairline);border-radius:10px;box-shadow:0 12px 32px -12px rgba(21,24,50,.28);padding:6px;min-width:168px;opacity:0;transform:translateY(-6px);pointer-events:none;transition:opacity .2s var(--ease),transform .2s var(--ease);z-index:20}
+.helpbtn:hover{color:var(--primary)}
+.useravatar{width:26px;height:26px;border-radius:50%;border:1.5px solid var(--border);background:var(--muted)}
+.helpmenu{position:absolute;top:48px;right:22px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius-md);box-shadow:var(--shadow-md);padding:6px;min-width:168px;opacity:0;transform:translateY(-6px);pointer-events:none;transition:opacity var(--duration-base) var(--ease-out),transform var(--duration-base) var(--ease-out);z-index:20}
 .helpmenu.open{opacity:1;transform:none;pointer-events:auto}
 .helpmenu button{display:block;width:100%;text-align:left;padding:8px 10px;border-radius:7px;font-size:12.5px;color:var(--ink-2)}
-.helpmenu button:hover{background:var(--ground);color:var(--ink)}
+.helpmenu button:hover{background:var(--muted);color:var(--foreground)}
 
 /* ---------- body ---------- */
 .body{flex:1;display:flex;min-height:0}
 .col{flex:1;min-width:0;display:flex;flex-direction:column}
+
+/* filters panel — persistent right pane, not inline in the chat. no divider:
+   the panel reads as a distinct surface by background/shadow, not a border */
+.filterpanel{width:0;flex:none;background:var(--card);padding:16px 0;overflow:hidden;display:flex;flex-direction:column;transition:width .45s var(--ease),padding .45s var(--ease)}
+.filterpanel.open{width:316px;padding:16px 48px 16px 16px;overflow-y:auto}
+.filterpanel.notransition{transition:none!important}
+.filterpanel::-webkit-scrollbar{width:0}
+.fph{display:flex;align-items:center;gap:7px;font-size:12px;font-weight:600;color:var(--foreground);margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--border)}
+.fph .fic{width:16px;height:16px;flex:none;color:var(--muted-foreground);display:flex;align-items:center;justify-content:center}
+.fph .fic svg{width:14px;height:14px}
+.fp-empty{font-size:12px;line-height:1.6;color:var(--faint);padding-top:2px}
 .scroll{flex:1;min-height:0;overflow-y:auto;scroll-behavior:smooth;padding:22px 34px 6px}
 .convwrap{max-width:780px;margin:0 auto}
 .scroll::-webkit-scrollbar{width:0}
 
 /* ---------- landing ---------- */
-.lwrap{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100%;text-align:center;padding:20px 0}
-.lmark{width:38px;height:38px;border-radius:50%;background:var(--navy);color:#fff;display:flex;align-items:center;justify-content:center;font-size:16px;margin-bottom:18px}
-.lhead{margin:0 0 24px;font-size:18px;font-weight:600;letter-spacing:-.005em;color:var(--ink)}
+.lwrap{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100%;text-align:center;padding:20px 0;transition:opacity .3s var(--ease)}
+.lwrap.out{opacity:0}
+.lmark{width:38px;height:38px;border-radius:50%;background:var(--navy);color:#fff;display:flex;align-items:center;justify-content:center;margin-bottom:18px}
+.lhead{margin:0 0 24px;font-size:18px;font-weight:600;letter-spacing:-.005em;color:var(--foreground)}
 .lpills{display:flex;flex-direction:column;gap:10px;width:100%;max-width:440px}
-.lpill{border:1px solid var(--hairline);border-radius:6px;background:var(--surface);padding:12px 18px;font-size:12.5px;line-height:1.45;color:var(--ink-2);text-align:left}
-.lpill:hover{border-color:var(--signal);background:var(--tint);color:var(--ink)}
+.lpill{border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--card);padding:12px 18px;font-size:12.5px;line-height:1.45;color:var(--ink-2);text-align:left}
+.lpill:hover{border-color:var(--primary);background:var(--primary-subtle);color:var(--foreground)}
 
-/* ---------- conversation ---------- */
+/* ---------- conversation (message/response layout intentionally left as-is
+   for this pass — unverified against the actual product UI) ---------- */
 .turn{display:flex;gap:11px;margin-bottom:16px}
 .turn.user{justify-content:flex-end}
 .ubub{background:var(--ground);border:1px solid var(--hairline-2);border-radius:var(--r);padding:9px 13px;font-size:13.5px;line-height:1.5;max-width:640px}
@@ -111,169 +145,170 @@ table{font-family:inherit}
 .aline{font-size:13.5px;line-height:1.55;color:var(--ink);margin:0 0 10px;max-width:80ch}
 
 /* message meta row: avatar + reaction icons + timestamp */
-.mrow{display:flex;align-items:center;gap:9px;margin-bottom:11px}
+.mrow{display:flex;align-items:center;gap:9px;margin-top:14px}
 .macts{display:flex;align-items:center;gap:1px}
-.macts button{width:23px;height:23px;border-radius:6px;display:flex;align-items:center;justify-content:center;color:var(--faint);font-size:12px;line-height:1}
-.macts button:hover{background:var(--ground);color:var(--ink-2)}
+.macts button{width:26px;height:26px;border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;color:var(--faint);transition:background var(--duration-fast) var(--ease-out),color var(--duration-fast) var(--ease-out)}
+.macts button:hover{background:var(--muted);color:var(--ink-2)}
 .mts{margin-left:auto;font-size:10.5px;color:var(--faint);white-space:nowrap;font-variant-numeric:tabular-nums}
 
-/* thinking (interpretation verb-cycle) */
-.think{display:inline-flex;align-items:center;gap:7px;font-size:12.5px;color:var(--signal);font-weight:500;margin-bottom:9px;transition:opacity .3s var(--ease)}
+/* thinking (interpretation verb-cycle) — calm skeleton-pulse loading state,
+   not an active-color spinner: this is idle waiting, not agent action */
+.think{display:inline-flex;align-items:center;gap:8px;font-size:12.5px;color:var(--muted-foreground);font-weight:500;margin-bottom:9px;transition:opacity .3s var(--ease)}
 .think.out{opacity:0}
-.think-ico{display:inline-block;font-size:11px;line-height:1;animation:spin 1.6s linear infinite;transform-origin:50% 52%}
-@keyframes spin{to{transform:rotate(360deg)}}
+.think-ico{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--muted-foreground);animation:pulse 1.1s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:.25}50%{opacity:1}}
 .think-verb{transition:opacity .18s ease}
 .think-verb.out{opacity:0}
 
-/* reasoning block — collapsible, collapsed by default, never wraps the filters card */
-.rtog{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:var(--signal);font-weight:500;margin-bottom:10px;padding:2px 0}
-.rtog .bulb{font-size:11px}
-.rtog .car{font-size:9px;transition:transform .3s var(--ease)}
+/* reasoning block — collapsible, collapsed by default. No boxed/gray
+   container: when open it's a plain, internally-scrollable region capped
+   at a fixed height, with a mask-image fade (not a scrollbar) hinting at
+   clipped content above/below. */
+.rtog{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:var(--muted-foreground);font-weight:500;margin-bottom:10px;padding:2px 0}
+.rtog .bulb{width:14px;height:14px;display:inline-flex}
+.rtog .car{width:14px;height:14px;display:inline-flex;transition:transform var(--duration-slow) var(--ease-out)}
 .rtog.closed .car{transform:rotate(-90deg)}
-.rbody{max-height:0;opacity:0;overflow:hidden;margin:0;border-left:2px solid var(--hairline);padding-left:15px;transition:max-height .45s var(--ease),opacity .3s var(--ease),margin .45s var(--ease)}
-.rbody.open{opacity:1;margin:0 0 15px}
+.rbody{max-height:0;opacity:0;overflow:hidden;margin:0;padding:0;scrollbar-width:none;-ms-overflow-style:none;transition:max-height .45s var(--ease-out),opacity .3s var(--ease-out),margin .45s var(--ease-out)}
+.rbody::-webkit-scrollbar{display:none}
+.rbody.open{opacity:1;margin:0 0 15px;max-height:200px;overflow-y:auto;padding:2px 0 6px}
+.rbody.open.fade-b{-webkit-mask-image:linear-gradient(to bottom,#000 calc(100% - 28px),transparent 100%);mask-image:linear-gradient(to bottom,#000 calc(100% - 28px),transparent 100%)}
+.rbody.open.fade-t{-webkit-mask-image:linear-gradient(to bottom,transparent,#000 28px,#000 100%);mask-image:linear-gradient(to bottom,transparent,#000 28px,#000 100%)}
+.rbody.open.fade-t.fade-b{-webkit-mask-image:linear-gradient(to bottom,transparent,#000 28px,#000 calc(100% - 28px),transparent 100%);mask-image:linear-gradient(to bottom,transparent,#000 28px,#000 calc(100% - 28px),transparent 100%)}
 .rbody p{margin:0 0 9px;font-size:12.5px;line-height:1.6;color:var(--ink-2);max-width:70ch}
 .rbody p:last-child{margin-bottom:0}
-.rbody b{font-weight:600;color:var(--ink)}
+.rbody b{font-weight:600;color:var(--foreground)}
 
-/* filters card — cumulative recap, always visible. reads as a parameter
-   table: hairline-only chrome, near-rectangular, state carried by a left
-   edge bar on each row rather than a badge+dashed-border combination. */
-.fcard{border:1px solid var(--hairline);border-radius:4px;background:var(--surface);padding:12px 16px;margin:0 0 16px;max-width:560px}
-.fcard-h{display:flex;align-items:center;gap:7px;font-size:12px;font-weight:600;color:var(--ink);margin-bottom:9px;padding-bottom:9px;border-bottom:1px solid var(--hairline-2)}
-.fcard-h .fic{width:15px;height:15px;flex:none;border-radius:2px;background:var(--signal);color:#fff;display:flex;align-items:center;justify-content:center;font-size:8px}
-.frow{position:relative;padding:8px 8px 8px 12px;margin:0 -8px;border-left:2px solid var(--signal)}
-.frow.assumed{border-left-color:var(--flag)}
-.frow + .frow{border-top:1px solid var(--hairline-2)}
+/* filter rows — live in the persistent right panel. plain neutral border
+   only (no continuous accent bar down the edge); provenance is carried by
+   a badge next to the label and a dashed/solid value-box border */
+.frow{position:relative;padding:8px 8px 8px 4px;margin:0 -8px}
 .frow-top{display:flex;align-items:center;gap:7px;margin-bottom:6px}
-.flabel{font-size:12.5px;font-weight:600;color:var(--ink)}
-.fstate{font-size:10.5px;font-weight:500;color:var(--flag);font-style:italic}
-.fx{margin-left:auto;color:var(--faint);font-size:13px;line-height:1;padding:1px 5px;border-radius:3px}
-.fx:hover{color:var(--no);background:var(--ground)}
+.flabel{font-size:12.5px;font-weight:600;color:var(--foreground)}
+.fassume{display:inline-flex;align-items:center;color:var(--primary)}
+.fx{margin-left:auto;width:16px;height:16px;display:flex;align-items:center;justify-content:center;color:var(--faint);border-radius:3px}
+.fx svg{width:12px;height:12px}
+.fx:hover{color:var(--no);background:var(--muted)}
 .fselwrap{position:relative;display:block}
-.fsel{appearance:none;-webkit-appearance:none;width:100%;border:1px solid var(--hairline);border-radius:4px;background:var(--surface);padding:7px 28px 7px 10px;font-size:12.5px;font-family:"IBM Plex Mono",ui-monospace,monospace;color:var(--ink);cursor:pointer}
+.fsel{appearance:none;-webkit-appearance:none;width:100%;border:1px solid var(--border);border-radius:4px;background:var(--card);padding:7px 28px 7px 10px;font-size:12.5px;font-variant-numeric:tabular-nums;color:var(--foreground);cursor:pointer}
 .fsel:hover{border-color:var(--graphite)}
-.fsel:focus{outline:none;border-color:var(--signal);box-shadow:0 0 0 3px var(--tint)}
-.fselwrap .fcar{position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:11px;color:var(--faint);pointer-events:none}
+.fsel:focus{outline:none;border-color:var(--primary)}
+.fselwrap .fcar{position:absolute;right:9px;top:50%;transform:translateY(-50%);width:14px;height:14px;color:var(--faint);pointer-events:none;display:flex}
 .freason{margin:6px 0 0;font-size:11.5px;line-height:1.5;color:var(--graphite);max-width:64ch}
 .freason b{color:var(--ink-2);font-weight:600}
-.fapply{display:inline-flex;align-items:center;gap:6px;margin-top:10px;border:1px solid var(--signal);color:var(--signal);background:var(--surface);border-radius:4px;padding:6px 13px;font-size:11.5px;font-weight:600;transition:background .25s var(--ease),color .25s var(--ease),border-color .25s var(--ease)}
-.fapply:hover{background:var(--tint)}
-.fcard.dirty .fapply{background:var(--signal);color:#fff}
-.fapply.flash{background:var(--navy);border-color:var(--navy);color:#fff}
 .frow.gone{max-height:0;opacity:0;margin:0;padding:0;border-top-width:0;overflow:hidden;transition:max-height .3s var(--ease),opacity .25s var(--ease),padding .3s var(--ease)}
 .frow.flash{animation:frowflash 1.1s var(--ease)}
-
-/* rows tucked behind "+N more" — collapsed by default, revealed in place */
-.frow-extra{max-height:0;opacity:0;margin:0;padding:0;border-top-width:0;overflow:hidden;transition:max-height .35s var(--ease),opacity .3s var(--ease),padding .35s var(--ease),margin .35s var(--ease)}
-.fcard.expanded .frow-extra{max-height:170px;opacity:1;margin:0 -8px;padding:8px 8px 8px 12px;border-top-width:1px}
-.fmore{display:flex;align-items:center;gap:6px;width:100%;padding:8px 10px;margin:2px -10px 0;border-top:1px solid var(--hairline-2);font-size:11.5px;font-weight:500;color:var(--signal)}
-.fmore:hover{color:var(--signal-d)}
-.fmore-ic{font-size:9px;transition:transform .25s var(--ease)}
-.fcard.expanded .fmore-ic{transform:rotate(180deg)}
-@keyframes frowflash{0%{background:rgba(74,70,204,.1)}100%{background:rgba(74,70,204,0)}}
+@keyframes frowflash{0%{background:rgba(91,95,239,.1)}100%{background:rgba(91,95,239,0)}}
 
 /* product card strip */
 .pstrip{margin-bottom:14px}
 .pstrip .ph{font-size:11px;font-weight:500;color:var(--faint);margin-bottom:8px}
 .pcards{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
-.pcard{border:1px solid var(--hairline);border-radius:4px;background:var(--surface);padding:11px 12px;display:flex;flex-direction:column;gap:4px}
-.pcard .pid{display:inline-flex;align-items:baseline;gap:2px;font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:13px;font-weight:600;color:var(--ink)}
+.pcard{border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--card);padding:11px 12px;display:flex;flex-direction:column;gap:4px}
+.pcard .pid{display:inline-flex;align-items:baseline;gap:2px;font-size:13px;font-weight:600;font-variant-numeric:tabular-nums;color:var(--foreground)}
 .pcard .pdesc{font-size:10.5px;line-height:1.4;color:var(--graphite)}
 
-/* comparison table */
-.ctable-wrap{overflow-x:auto;border:1px solid var(--hairline);border-radius:4px;margin-bottom:12px}
+/* comparison table — recommended row marked by a left-border accent only,
+   never a filled background */
+.ctable-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:var(--radius-sm);margin-bottom:12px}
 .ctable{width:100%;border-collapse:collapse;font-size:11.5px;min-width:460px}
-.ctable th{text-align:left;font-size:10.5px;font-weight:600;color:var(--graphite);padding:8px 12px;border-bottom:1px solid var(--hairline);background:var(--ground)}
-.ctable td{padding:8px 12px;border-bottom:1px solid var(--hairline-2);color:var(--ink-2);font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:11px}
+.ctable th{text-align:left;font-size:10.5px;font-weight:600;color:var(--graphite);padding:8px 12px;border-bottom:1px solid var(--border);background:var(--muted)}
+.ctable td{padding:8px 12px;border-bottom:1px solid var(--border);color:var(--ink-2);font-size:11px;font-variant-numeric:tabular-nums}
 .ctable tr:last-child td{border-bottom:none}
-.ctable .modelname{font-weight:600;color:var(--ink)}
+.ctable .modelname{font-weight:600;color:var(--foreground)}
+.ctable .modelname.rec-row{border-left:3px solid var(--primary);padding-left:9px}
 
 /* candidate notes */
 .cnote{font-size:12.5px;line-height:1.6;color:var(--ink-2);margin:0 0 6px;max-width:76ch}
-.cnote b{font-family:"IBM Plex Mono",ui-monospace,monospace;font-weight:600;color:var(--ink)}
+.cnote b{font-weight:600;font-variant-numeric:tabular-nums;color:var(--foreground)}
 .cnotes{margin-bottom:14px}
 
-/* citation tags + hover source card — trace (teal), not signal: these mark
-   verified/sourced data, a different kind of claim than the agent acting */
-.ctag{position:relative;display:inline-flex;align-items:center;gap:3px;font-size:10.5px;font-weight:600;font-family:"IBM Plex Mono",ui-monospace,monospace;color:var(--trace);background:var(--trace-tint);border:1px solid var(--trace);border-radius:3px;padding:1px 6px;margin:0 1px;cursor:default;white-space:nowrap;vertical-align:1px}
-.ctag-ar{font-size:9px}
-.ctag:hover,.ctag:focus-within{background:var(--trace);color:#fff;outline:none}
-.cbadge{position:relative;display:inline-flex;align-items:center;justify-content:center;min-width:15px;height:15px;font-size:9.5px;font-weight:700;font-family:"IBM Plex Mono",ui-monospace,monospace;color:var(--trace);background:var(--trace-tint);border:1px solid var(--trace);border-radius:3px;padding:0 4px;margin-left:6px;cursor:default;vertical-align:2px}
-.cbadge:hover,.cbadge:focus-within{background:var(--trace);color:#fff;outline:none}
-.cpop{position:absolute;bottom:calc(100% + 9px);left:0;width:264px;background:var(--surface);border:1px solid var(--hairline);border-radius:6px;box-shadow:0 10px 24px -8px rgba(20,21,30,.22);padding:12px 13px;opacity:0;transform:translateY(6px);pointer-events:none;transition:opacity .18s var(--ease),transform .18s var(--ease);z-index:30;white-space:normal;text-align:left}
-.ctag:hover .cpop,.ctag:focus-within .cpop,.cbadge:hover .cpop,.cbadge:focus-within .cpop{opacity:1;transform:none;pointer-events:auto}
+/* citation tags + hover source card — index badge + muted label, neutral at
+   rest, no icon; a single element transitions on hover (no overlapping
+   second element — the popover is a separate, position:absolute child that
+   only ever affects opacity/transform, never stacks visually at rest) */
+.ctag{position:relative;display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:500;color:var(--muted-foreground);background:var(--muted);border:1px solid var(--border);border-radius:var(--radius-sm);padding:2px 7px 2px 2px;margin:0 1px;cursor:default;white-space:nowrap;vertical-align:1px;transition:background var(--duration-base) var(--ease-out),color var(--duration-base) var(--ease-out),border-color var(--duration-base) var(--ease-out)}
+.ctag .cidx{display:inline-flex;align-items:center;justify-content:center;min-width:14px;height:14px;font-size:9.5px;font-weight:700;font-variant-numeric:tabular-nums;border-radius:3px;background:var(--card);color:var(--foreground);transition:background var(--duration-base) var(--ease-out),color var(--duration-base) var(--ease-out)}
+.ctag:hover,.ctag:focus-within{background:var(--primary-subtle);color:var(--primary);border-color:var(--primary);outline:none}
+.ctag:hover .cidx,.ctag:focus-within .cidx{background:var(--primary);color:#fff}
+.cbadge{position:relative;display:inline-flex;align-items:center;justify-content:center;min-width:15px;height:15px;font-size:9.5px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--muted-foreground);background:var(--muted);border:1px solid var(--border);border-radius:var(--radius-sm);padding:0 4px;margin-left:6px;cursor:default;vertical-align:2px;transition:background var(--duration-base) var(--ease-out),color var(--duration-base) var(--ease-out),border-color var(--duration-base) var(--ease-out)}
+.cbadge:hover,.cbadge:focus-within{background:var(--primary);color:#fff;border-color:var(--primary);outline:none}
+/* citation popover renders as a single shared node inside #frame (not
+   nested under .scroll), positioned via JS from the trigger's bounding box —
+   this keeps it from being clipped by .scroll's overflow or painted under
+   the topbar the way a same-context CSS-hover popover would be */
+.cpop-host{position:absolute;width:264px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius-md);box-shadow:var(--shadow-md);padding:12px 13px;opacity:0;transform:translateY(6px);pointer-events:none;transition:opacity .18s var(--ease-out),transform .18s var(--ease-out);z-index:50;white-space:normal;text-align:left}
+.cpop-host.show{opacity:1;transform:none}
 .cpop-src{display:flex;align-items:center;gap:5px;font-size:10.5px;color:var(--graphite);margin-bottom:7px}
-.cpop-src .globe{font-size:10px}
-.cpop-src .ext{margin-left:auto;color:var(--faint);font-size:10px}
-.cpop-title{display:block;font-size:13px;font-weight:600;color:var(--ink);line-height:1.35;margin-bottom:6px}
-.cpop-tag{display:inline-block;font-size:10px;font-weight:600;font-family:"IBM Plex Mono",ui-monospace,monospace;color:var(--trace);background:var(--trace-tint);border-radius:3px;padding:2px 7px;margin-bottom:8px}
-.cpop-quote{display:block;font-size:11.5px;font-style:italic;line-height:1.55;color:var(--ink-2);border-left:2px solid var(--hairline);padding-left:9px;margin-bottom:10px}
-.cpop-foot{display:flex;flex-wrap:wrap;gap:5px;border-top:1px solid var(--hairline-2);padding-top:9px}
-.cpill{display:inline-flex;align-items:center;font-size:9.5px;font-weight:600;font-family:"IBM Plex Mono",ui-monospace,monospace;color:var(--ink-2);background:var(--ground);border:1px solid var(--hairline);border-radius:3px;padding:3px 6px}
-.cpill.active{color:var(--trace);border-color:var(--trace);background:var(--trace-tint)}
+.cpop-src .globe{width:14px;height:14px;display:flex}
+.cpop-src .ext{margin-left:auto;color:var(--faint);width:14px;height:14px;display:flex}
+.cpop-title{display:block;font-size:13px;font-weight:600;color:var(--foreground);line-height:1.35;margin-bottom:6px}
+.cpop-tag{display:inline-block;font-size:10px;font-weight:600;color:var(--primary);background:var(--primary-subtle);border-radius:3px;padding:2px 7px;margin-bottom:8px}
+.cpop-quote{display:block;font-size:11.5px;font-weight:400;font-style:italic;line-height:1.55;color:var(--muted-foreground);border-left:2px solid var(--border);padding-left:9px;margin-bottom:10px}
+.cpop-foot{display:flex;flex-wrap:wrap;gap:5px;border-top:1px solid var(--border);padding-top:9px}
+.cpill{display:inline-flex;align-items:center;font-size:9.5px;font-weight:600;color:var(--ink-2);background:var(--muted);border:1px solid var(--border);border-radius:3px;padding:3px 6px}
+.cpill.active{color:var(--primary);border-color:var(--primary);background:var(--primary-subtle)}
 
 /* recommendation cards */
-.recs{display:grid;grid-template-columns:repeat(3,1fr);gap:11px;margin-bottom:14px;align-items:start}
-.rec{border:1px solid var(--hairline);border-left-width:1px;border-radius:6px;background:var(--surface);overflow:hidden;transition:border-color .5s var(--ease),border-left-width .5s var(--ease),opacity .5s var(--ease)}
-.rec.win{border-color:var(--signal);border-left-width:3px}
+.recs{display:grid;grid-template-columns:repeat(3,1fr);gap:11px;margin-bottom:14px;align-items:stretch}
+.rec{display:flex;flex-direction:column;height:100%;border:1px solid var(--border);border-radius:var(--radius-lg);background:var(--card);box-shadow:var(--shadow-sm);overflow:hidden;transition:border-color .5s var(--ease),border-width .5s var(--ease),opacity .5s var(--ease),box-shadow .5s var(--ease)}
+.rec.win{border-color:var(--primary);border-width:2px;box-shadow:var(--shadow-md)}
 .rec.out{opacity:.72}
-.rec .rh{display:flex;align-items:flex-start;gap:8px;padding:12px 12px 8px;border-bottom:1px solid var(--hairline-2)}
-.rec .pn{font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:14.5px;font-weight:600;letter-spacing:-.01em}
-.rec .sub{font-size:10.5px;color:var(--graphite);margin-top:2px;line-height:1.35}
-.badge{margin-left:auto;flex:none;font-size:10.5px;font-weight:600;background:var(--signal);color:#fff;border-radius:3px;padding:3px 8px}
-.badge.alt{background:var(--surface);color:var(--graphite);border:1px solid var(--hairline)}
+.rec .rh{padding:12px 12px 11px;border-bottom:1px solid var(--border)}
+.rec .pn{display:flex;align-items:baseline;gap:6px;font-size:14.5px;font-weight:600;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+.rec .sub{width:100%;font-size:11.5px;color:var(--graphite);margin-top:8px;line-height:1.45}
+.badge{display:inline-flex;margin-top:7px;font-size:10.5px;font-weight:600;background:var(--primary);color:var(--primary-foreground);border-radius:3px;padding:3px 8px}
 .reqs{padding:2px 12px 0}
-.req{display:grid;grid-template-columns:14px 1fr;gap:8px;align-items:start;padding:7px 0;border-bottom:1px solid var(--hairline-2)}
+.req{display:grid;grid-template-columns:14px 1fr;gap:8px;align-items:start;padding:7px 0;border-bottom:1px solid var(--border)}
 .req:last-child{border-bottom:none}
-.vd{font-size:11px;line-height:1.4;font-weight:700}
+.vd{width:14px;height:14px;display:flex}
 .vd.yes{color:var(--trace)}
 .vd.no{color:var(--no)}
-.req .rn{font-size:11.5px;font-weight:600;color:var(--ink);line-height:1.35}
-.req .rv2{font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:10px;color:var(--graphite);margin-top:1px;line-height:1.4}
+.req .rn{display:block;font-size:11.5px;font-weight:600;color:var(--foreground);line-height:1.35}
+.req .rv2{display:block;font-size:10px;color:var(--graphite);margin-top:2px;line-height:1.4;font-variant-numeric:tabular-nums}
 .req.miss .rn,.req.miss .rv2{color:var(--no)}
-.rfoot{padding:9px 12px 11px;background:var(--ground);border-top:1px solid var(--hairline-2);margin-top:7px}
+.rfoot{padding:9px 12px 11px;background:var(--muted);border-top:1px solid var(--border);margin-top:auto}
 .rfoot p{margin:0;font-size:11px;line-height:1.55;color:var(--ink-2)}
 
-/* action bar (docked) */
-.actbar{flex:none;padding:0 26px 10px;display:flex;gap:8px;flex-wrap:wrap;transition:opacity .3s var(--ease)}
+/* action bar (docked) — neutral-outline (secondary) */
+.actbar{flex:none;padding:0 26px 6px;display:flex;gap:8px;flex-wrap:wrap}
 .actbar[hidden]{display:none}
-.actbtn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--hairline);border-radius:5px;padding:7px 12px;font-size:12px;color:var(--ink-2);background:var(--surface)}
-.actbtn:hover{background:var(--ground)}
-.actbtn .ic{font-size:12px;color:var(--signal)}
+.actbtn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--border);border-radius:5px;padding:7px 12px;font-size:12px;color:var(--ink-2);background:var(--card);transition:background var(--duration-base) var(--ease-out)}
+.actbtn:hover{background:var(--muted)}
+.actbtn .ic{width:14px;height:14px;display:flex;color:var(--muted-foreground)}
 
-/* input bar */
-.inbar{flex:none;padding:12px 26px 10px;background:var(--surface)}
-.infield{display:flex;align-items:center;gap:9px;border:1px solid var(--hairline);border-radius:6px;padding:10px 12px;background:var(--surface)}
-.infield.hot{border-color:var(--signal);box-shadow:0 0 0 3px var(--tint)}
-.intext{flex:1;font-size:13px;color:var(--ink);min-height:19px;line-height:19px}
+/* input bar — card background, border-only focus, no glow */
+.inbar{flex:none;padding:6px 26px 10px;background:var(--card)}
+.infield{display:flex;align-items:center;gap:9px;border:1px solid var(--border);border-radius:var(--radius-md);padding:10px 12px;background:var(--card);transition:border-color var(--duration-base) var(--ease-out)}
+.infield.hot{border-color:var(--primary)}
+.intext{flex:1;font-size:13px;color:var(--foreground);min-height:19px;line-height:19px}
 .intext.ph{color:var(--faint)}
-.caret{display:inline-block;width:1.5px;height:14px;background:var(--signal);vertical-align:-2px;margin-left:1px;animation:blink 1s steps(1,end) infinite}
+.caret{display:inline-block;width:1.5px;height:14px;background:var(--primary);vertical-align:-2px;margin-left:1px;animation:blink 1s steps(1,end) infinite}
 @keyframes blink{50%{opacity:0}}
-.attach,.mic{color:var(--faint);font-size:13px;flex:none}
-.send{width:26px;height:26px;border-radius:50%;background:var(--tint);color:var(--signal);display:flex;align-items:center;justify-content:center;font-size:12px;flex:none;transition:background .3s var(--ease),color .3s var(--ease),transform .3s var(--ease)}
-.send.on{background:var(--signal);color:#fff}
+.attach,.mic{width:16px;height:16px;display:flex;color:var(--faint);flex:none}
+.send{width:26px;height:26px;border-radius:50%;background:var(--primary-subtle);color:var(--primary);display:flex;align-items:center;justify-content:center;flex:none;transition:background .3s var(--ease-out),color .3s var(--ease-out),transform .3s var(--ease-out)}
+.send svg{width:16px;height:16px}
+.send.on{background:var(--primary);color:var(--primary-foreground)}
 .send.fire{transform:scale(.85)}
 
 /* brand footer */
-.brandbar{flex:none;display:flex;align-items:center;justify-content:flex-end;gap:9px;padding:7px 26px;background:var(--surface);font-size:10px;color:var(--faint)}
+.brandbar{flex:none;display:flex;align-items:center;justify-content:flex-end;gap:9px;padding:7px 26px;background:var(--card);font-size:10px;color:var(--faint)}
 .brandbar b{color:var(--ink-2);font-weight:600}
-.brandbar .ic{color:var(--faint);font-size:11px}
+.brandbar .ic{width:14px;height:14px;display:flex;color:var(--faint)}
 
 /* ---------- reveal ---------- */
 .rv{opacity:0;transform:translateY(10px)}
 .rv.in{opacity:1;transform:none;transition:opacity .7s var(--ease),transform .7s var(--ease)}
 
 /* ---------- step control ---------- */
-#steps{margin-top:14px;display:flex;align-items:center;gap:6px;background:var(--surface);border:1px solid var(--hairline);border-radius:10px;padding:7px 9px;box-shadow:0 1px 2px rgba(21,24,50,.05);flex:none}
+#steps{margin-top:14px;display:flex;align-items:center;gap:6px;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:7px 9px;box-shadow:var(--shadow-sm);flex:none}
 #steps.hide{display:none}
 #steps button{display:flex;flex-direction:column;align-items:center;gap:3px;padding:5px 8px;border-radius:7px;min-width:72px}
-#steps button:hover{background:var(--ground)}
+#steps button:hover{background:var(--muted)}
 #steps button.on{background:var(--navy)}
-#steps .num{font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:12px;font-weight:600;color:var(--graphite)}
+#steps .num{font-size:12px;font-weight:600;font-variant-numeric:tabular-nums;color:var(--graphite)}
 #steps .lab{font-size:9px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--faint);white-space:nowrap}
 #steps button.on .num,#steps button.on .lab{color:#fff}
-#steps .hint{font-size:10px;color:var(--faint);padding-left:8px;border-left:1px solid var(--hairline);margin-left:4px;line-height:1.45;white-space:nowrap}
+#steps .hint{font-size:10px;color:var(--faint);padding-left:8px;border-left:1px solid var(--border);margin-left:4px;line-height:1.45;white-space:nowrap}
 @media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important}}
 </style>
 </head>
@@ -284,11 +319,11 @@ table{font-family:inherit}
       <div class="sidenav">
         <div class="cust"><span class="cav">H</span><span class="cn">Helios Aerial Systems</span></div>
         <div class="navlist">
-          <button class="navitem active"><span class="ic">&#9679;</span>Conversations</button>
-          <button class="navitem"><span class="ic">&#9636;</span>Notes</button>
-          <button class="navitem"><span class="ic">&#9707;</span>Collections</button>
+          <button class="navitem active"><span class="ic"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-2.6 6.1 8.5 8.5 0 0 1-6 2.4 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8 8.5 8.5 0 0 1 2.4-6A8.4 8.4 0 0 1 12.5 3h.5a8 8 0 0 1 8 8v.5Z"/></svg></span>Conversations</button>
+          <button class="navitem"><span class="ic"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6M9 13h6M9 17h6M9 9h1"/></svg></span>Notes</button>
+          <button class="navitem"><span class="ic"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 2 9 5-9 5-9-5 9-5Z"/><path d="m3 12 9 5 9-5"/><path d="m3 17 9 5 9-5"/></svg></span>Collections</button>
         </div>
-        <button class="newconvo"><span>&#43;</span>New Conversation</button>
+        <button class="newconvo"><span style="width:16px;height:16px;display:flex"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></span>New Conversation</button>
         <div class="recent-eyebrow">Recent Conversations</div>
         <div class="convgroup">
           <div class="gl">Today</div>
@@ -312,7 +347,7 @@ table{font-family:inherit}
       </div>
       <div class="mainpane">
         <div class="topbar">
-          <button class="crumb">Sales Agents<span class="sep">/</span><span class="agent">Rapid Selection Agent</span><span class="car">&#9662;</span></button>
+          <button class="crumb">Sales Agents<span class="sep">/</span><span class="agent">Rapid Selection Agent</span><span class="car"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></span></button>
           <div class="topbar-right">
             <button class="helpbtn" id="helpbtn">Help</button>
             <span class="useravatar"></span>
@@ -327,24 +362,25 @@ table{font-family:inherit}
           <div class="col">
             <div class="scroll" id="scroll"></div>
             <div class="actbar" id="actbar" hidden>
-              <button class="actbtn"><span class="ic">&#9636;</span>Submit an enquiry</button>
-              <button class="actbtn"><span class="ic">&#9678;</span>Request quote</button>
-              <button class="actbtn"><span class="ic">&#9671;</span>Talk to team</button>
+              <button class="actbtn"><span class="ic"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg></span>Submit an enquiry</button>
+              <button class="actbtn"><span class="ic"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6M9 13h6M9 17h6M9 9h1"/></svg></span>Request quote</button>
+              <button class="actbtn"><span class="ic"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19a5.5 5.5 0 0 1 11 0"/><path d="M16 8.7a3 3 0 1 1 3.6 2.9M19 14a5 5 0 0 1 3.3 4.6"/></svg></span>Talk to team</button>
             </div>
             <div class="inbar">
               <div class="infield" id="infield">
                 <div class="intext ph" id="intext">Ask a follow-up question&hellip;</div>
-                <span class="attach">&#43;</span>
-                <span class="mic">&#9096;</span>
-                <div class="send" id="send">&#8593;</div>
+                <span class="attach"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.5 12.5 12 21a5 5 0 0 1-7-7l8.5-8.5a3.5 3.5 0 0 1 5 5L10 19a2 2 0 1 1-3-3l7-7"/></svg></span>
+                <span class="mic"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M6 11a6 6 0 0 0 12 0M12 17v4M9 21h6"/></svg></span>
+                <div class="send" id="send"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M6 11l6-6 6 6"/></svg></div>
               </div>
             </div>
             <div class="brandbar">
               <span>Powered by <b>Rapidflare</b></span>
-              <span class="ic">&#9432;</span>
-              <span class="ic">&#10722;</span>
+              <span class="ic"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8v.01"/></svg></span>
+              <span class="ic"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 4.5 6v6c0 5 3.3 7.6 7.5 9 4.2-1.4 7.5-4 7.5-9V6L12 3Z"/><path d="m9 12 2 2 4-4"/></svg></span>
             </div>
           </div>
+          <div class="filterpanel" id="filterpanel"></div>
         </div>
       </div>
     </div>
@@ -365,24 +401,44 @@ var TS = [
   "Sep 09, 2026, 9:33 AM (PDT)"
 ];
 
-var STEP_LABELS = ["Landing","Initiation","Interpretation","Shortlist","Recommend","Reset"];
-var LAST = 6;
+var STEP_LABELS = ["Landing","Interpretation","Shortlist","Recommend","Reset"];
+var LAST = 5;
 
 var scroll = document.getElementById('scroll');
+var actbar = document.getElementById('actbar');
 var intext = document.getElementById('intext');
 var infield = document.getElementById('infield');
 var send = document.getElementById('send');
 var stepsBar = document.getElementById('steps');
-var actbar = document.getElementById('actbar');
+var filterpanel = document.getElementById('filterpanel');
 
 var timers = [];
 function at(ms, fn){ timers.push(setTimeout(fn, ms)); }
 function clearTimers(){ timers.forEach(clearTimeout); timers = []; }
 
+/* ---------- icon system: Lucide-style outline SVGs, stroke-width 1.5,
+   three sizes only — 14 inline-with-text, 16 inside interactive controls,
+   20 for the one empty-state hero mark ---------- */
+function ico(paths, size){
+  return '<svg width="' + size + '" height="' + size + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:-3px;flex:none">' + paths + '</svg>';
+}
+var I = {
+  checkCircle: '<circle cx="12" cy="12" r="9"/><path d="m8.5 12.5 2.3 2.3L15.5 9.5"/>',
+  xCircle: '<circle cx="12" cy="12" r="9"/><path d="m9.5 9.5 5 5M14.5 9.5l-5 5"/>',
+  check: '<path d="M20 6 9 17l-5-5"/>',
+  x: '<path d="M18 6 6 18M6 6l12 12"/>',
+  chevronDown: '<path d="m6 9 6 6 6-6"/>',
+  filter: '<path d="M4 5h16M7 12h10M10 19h4"/>',
+  globe: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3a13 13 0 0 1 0 18 13 13 0 0 1 0-18Z"/>',
+  externalLink: '<path d="M18 13v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h6"/><path d="M15 3h6v6M10 14 21 3"/>',
+  sparkles: '<path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.5 6.5l2 2M15.5 15.5l2 2M6.5 17.5l2-2M15.5 8.5l2-2"/>',
+  idea: '<path d="M8 1.6a4 4 0 0 0-2.2 7.3c.4.3.7.8.7 1.3v.4h3v-.4c0-.5.3-1 .7-1.3A4 4 0 0 0 8 1.6Z" transform="translate(4 4) scale(1.15)"/><path d="M6.3 12.6h3.4M6.8 14.1h2.4" transform="translate(4 4) scale(1.15)"/>'
+};
+
 /* ---------- citations ---------- */
 var CITATIONS = [
   { num: 1, kind: 'RF design note', ref: 'Impedance',
-    title: '50Ω Impedance — RF Design Note', tag: '§2 · Impedance matching',
+    title: '50Ω Impedance — RF Design Note', tag: '§2 · Impedance matching',
     quote: 'Commercial RF and wireless systems — WLAN, cellular, GNSS — are near-universally designed around a 50Ω characteristic impedance. Match to this value unless the board explicitly specifies otherwise.' },
   { num: 2, kind: 'Datasheet', ref: 'ANT-521',
     title: 'ANT-521 — Spec sheet', tag: 'p. 4 · Radiation pattern',
@@ -396,29 +452,19 @@ var CITATIONS = [
 ];
 function citeFooter(activeNum){
   return CITATIONS.map(function(c){
-    return '<span class="cpill' + (c.num === activeNum ? ' active' : '') + '">&#187;' + c.num + ' &middot; ' + c.kind + ' &middot; ' + c.ref + '</span>';
+    return '<span class="cpill' + (c.num === activeNum ? ' active' : '') + '">' + c.num + ' &middot; ' + c.kind + ' &middot; ' + c.ref + '</span>';
   }).join('');
-}
-function citePop(num){
-  var c = CITATIONS[num - 1];
-  return '<span class="cpop">' +
-    '<span class="cpop-src"><span class="globe">&#127760;</span>rapidflare.ai<span class="ext">&#8599;</span></span>' +
-    '<span class="cpop-title">' + c.title + '</span>' +
-    '<span class="cpop-tag">' + c.tag + '</span>' +
-    '<span class="cpop-quote">&ldquo;' + c.quote + '&rdquo;</span>' +
-    '<span class="cpop-foot">' + citeFooter(num) + '</span>' +
-  '</span>';
 }
 function cite(num){
   var c = CITATIONS[num - 1];
-  return '<span class="ctag" tabindex="0"><span class="ctag-ar">&#187;</span>' + num + ' &middot; ' + c.kind + ' &middot; ' + c.ref + citePop(num) + '</span>';
+  return '<span class="ctag" tabindex="0" data-cite="' + num + '"><span class="cidx">' + num + '</span>' + c.kind + ' &middot; ' + c.ref + '</span>';
 }
 function citeBadge(num){
-  return '<span class="cbadge" tabindex="0">' + num + citePop(num) + '</span>';
+  return '<span class="cbadge" tabindex="0" data-cite="' + num + '">' + num + '</span>';
 }
 
 /* ---------- message meta row ---------- */
-var SVG_OPEN = '<svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">';
+var SVG_OPEN = '<svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:-3px;flex:none">';
 var MICONS = {
   idea: SVG_OPEN + '<path d="M8 1.6a4 4 0 0 0-2.2 7.3c.4.3.7.8.7 1.3v.4h3v-.4c0-.5.3-1 .7-1.3A4 4 0 0 0 8 1.6Z"/><path d="M6.3 12.6h3.4M6.8 14.1h2.4"/></svg>',
   up: SVG_OPEN + '<path d="M2.2 8h2v5.6h-2z"/><path d="M4.2 8l3-5.3c.3-.5 1-.5 1.3.1l.2.5c.3.7.1 1.5-.4 2.1L7.6 7h4.3A1.3 1.3 0 0 1 13.2 8.5l-.8 4a1.3 1.3 0 0 1-1.28 1.1H4.2"/></svg>',
@@ -426,8 +472,8 @@ var MICONS = {
   speak: SVG_OPEN + '<path d="M2.3 6.2h2.2L7.8 3.4v9.4L4.5 10.2H2.3z"/><path d="M10.3 6.2a3 3 0 0 1 0 4"/><path d="M12.1 4.5a5.6 5.6 0 0 1 0 7.4"/></svg>',
   copy: SVG_OPEN + '<rect x="6.1" y="6.1" width="7.4" height="7.4" rx="1.3"/><path d="M3.6 10V3.8a1.2 1.2 0 0 1 1.2-1.2h6.3"/></svg>'
 };
-function metaRow(ts){
-  return '<div class="mrow">' +
+function metaRow(ts, cls, attrs){
+  return '<div class="mrow' + (cls ? ' ' + cls : '') + '"' + (attrs || '') + '>' +
     '<div class="macts">' +
       '<button title="Reasoning">' + MICONS.idea + '</button>' +
       '<button title="Helpful">' + MICONS.up + '</button>' +
@@ -441,7 +487,7 @@ function metaRow(ts){
 /* ---------- content blocks ---------- */
 function landing(){
   return '<div class="lwrap">' +
-    '<div class="lmark">&#10022;</div>' +
+    '<div class="lmark">' + ico(I.sparkles, 20) + '</div>' +
     '<h1 class="lhead">Hi Sam, what can I help you with today?</h1>' +
     '<div class="lpills">' +
       '<button class="lpill">I need an omnidirectional antenna for a drone, with as few nulls as possible.</button>' +
@@ -460,7 +506,7 @@ function userTurn(text, st, id){
 /* ---------- turn 1: the transcript paragraphs, plain, in full ---------- */
 var THINK_VERBS = ['Reading the request', 'Weighing antenna types', 'Checking impedance'];
 function thinkingRow(){
-  return '<div class="think" id="think"><span class="think-ico">&#10022;</span><span class="think-verb" id="thinkVerb">' + THINK_VERBS[0] + '</span></div>';
+  return '<div class="think" id="think"><span class="think-ico"></span><span class="think-verb" id="thinkVerb">' + THINK_VERBS[0] + '</span></div>';
 }
 function runThinking(done){
   var el = document.getElementById('thinkVerb');
@@ -479,20 +525,33 @@ function runThinking(done){
   at(430, step);
 }
 function question1(n){
-  return '<p class="aline' + (n === 3 ? ' rv' : '') + '"' + (n === 3 ? ' id="q1"' : '') + '>Could you let me know what frequency bands this needs to support, and what connector type your board uses?</p>';
+  return '<p class="aline' + (n === 2 ? ' rv' : '') + '"' + (n === 2 ? ' id="q1"' : '') + '>Could you let me know what frequency bands this needs to support, and what connector type your board uses?</p>';
 }
 
 /* ---------- reasoning block (turn 1 only, collapsed by default) ---------- */
-function reasoningBlock(n){
-  return '<div' + (n === 3 ? ' class="rv" id="rwrap"' : '') + '>' +
-    '<button class="rtog closed"><span class="bulb">&#9678;</span><span class="rlabel">Show reasoning</span><span class="car">&#9662;</span></button>' +
-    '<div class="rbody" id="rbody">' +
-      '<p>This reads like a use-case question — the buyer is describing a deployment (a drone airframe) rather than naming a part or a spec.</p>' +
-      '<p>Three explicit constraints: omnidirectional coverage, minimal nulls, drone mounting. <b>Dipole and monopole-style</b> elements satisfy the first two best, since they hold a fuller 360&deg; pattern with fewer dead zones than directional designs — that&rsquo;s how the pattern requirement gets met, not a filter of its own.</p>' +
-      '<p>Translating those into catalog filters: fix radiation pattern to omnidirectional, low-null, and set impedance to <b>50&nbsp;&Omega;</b> as a starting point — near-universal across RF and wireless, so it costs almost nothing and rules out a handful of non-standard parts.</p>' +
-      '<p>Running those filters across 24 antennas returns 20 candidates. Still too broad to recommend confidently — <b>bands</b> and <b>connector type</b> are the next two most selective parameters, and I have neither.</p>' +
-      '<p>Ranking by fit doesn&rsquo;t separate the 20 meaningfully at this stage, which confirms a clarifying question will do more here than more ranking.</p>' +
-    '</div></div>';
+var REASONING = {
+  1:
+    '<p>This reads like a use-case question — the buyer is describing a deployment (a drone airframe) rather than naming a part or a spec.</p>' +
+    '<p>Three explicit constraints: omnidirectional coverage, minimal nulls, drone mounting. <b>Dipole and monopole-style</b> elements satisfy the first two best, since they hold a fuller 360&deg; pattern with fewer dead zones than directional designs — that&rsquo;s how the pattern requirement gets met, not a filter of its own.</p>' +
+    '<p>Translating those into catalog filters: fix radiation pattern to omnidirectional, low-null, and set impedance to <b>50&nbsp;&Omega;</b> as a starting point — near-universal across RF and wireless, so it costs almost nothing and rules out a handful of non-standard parts.</p>' +
+    '<p>Running those filters across 24 antennas returns 20 candidates. Still too broad to recommend confidently — <b>bands</b> and <b>connector type</b> are the next two most selective parameters, and I have neither.</p>' +
+    '<p>Ranking by fit doesn&rsquo;t separate the 20 meaningfully at this stage, which confirms a clarifying question will do more here than more ranking.</p>',
+  2:
+    '<p>Two new constraints just landed: <b>LTE + GNSS</b> band support and a <b>u.FL</b> connector. Both are hard requirements, not preferences, so they apply as filters rather than ranking factors.</p>' +
+    '<p>Band support is the more selective of the two — a lot of the pool only covers a single band family, so requiring both LTE and GNSS together eliminates most single-band designs outright.</p>' +
+    '<p>Connector type narrows further. I&rsquo;m keeping native <b>u.FL</b> parts and one adapter-compatible option, but weighting the adapter path down slightly — an added mated connection is one more point of failure in the RF path.</p>' +
+    '<p>Applying both filters against the 20 candidates from the first pass leaves <b>5</b>. Ranking the remainder by omnidirectional performance and null count surfaces three worth showing; the other two are marginal enough not to be worth the comparison.</p>' +
+    '<p>None of these three differ on bands or connector anymore — the only variable left that would separate them is ground plane availability, which I don&rsquo;t have yet.</p>',
+  3:
+    '<p>Ground plane availability was the one open variable from the last turn, and it just resolved: <b>not available</b>, on a small frame with limited mounting surface.</p>' +
+    '<p>Checking each of the three shortlisted candidates against that constraint: <b>ANT-521</b> requires a ground plane for its rated pattern — fails. <b>ANT-533</b> also requires one, on top of needing a connector adapter — fails on two counts. <b>ANT-518</b> is a balanced dipole element with no ground plane dependency — passes.</p>' +
+    '<p>With only one candidate satisfying every stated and confirmed constraint, this isn&rsquo;t a close ranking call — the other two are disqualified outright rather than out-scored.</p>' +
+    '<p>The one trade-off worth surfacing is beamwidth: ANT-518 runs slightly wider than ANT-521. That&rsquo;s a minor difference next to a hard mounting constraint, so it doesn&rsquo;t change the recommendation.</p>'
+};
+function reasoningBlock(turn, reveal){
+  return '<div' + (reveal ? ' class="rv" id="rwrap' + turn + '"' : '') + '>' +
+    '<button class="rtog closed"><span class="bulb">' + ico(I.idea, 14) + '</span><span class="rlabel">Show reasoning</span><span class="car">' + ico(I.chevronDown, 14) + '</span></button>' +
+    '<div class="rbody">' + REASONING[turn] + '</div></div>';
 }
 
 /* ---------- filters card (cumulative recap, one per turn) ---------- */
@@ -518,51 +577,42 @@ var FILTERS = [
     options:['Not available','Available','Unknown'],
     reason:'You confirmed no ground plane at the mount point.' }
 ];
-var FILTER_CAP = 3;
-/* Which rows show by default when a card has more than FILTER_CAP: prioritize
-   whatever is newest — first the filters that became known this turn, then
-   fill remaining slots by recency (most-recently-known first) — so a fresh
-   row is (almost) never buried behind "+N more". Ties within the same turn
-   keep their natural (insertion) order. Everything else renders in its usual
-   chronological position but starts collapsed under the toggle. */
-function visibleFilterIds(rows){
-  if(rows.length <= FILTER_CAP) return null;
-  var byRecency = rows.slice().sort(function(a, b){ return b.turn - a.turn; });
-  var ids = {};
-  byRecency.slice(0, FILTER_CAP).forEach(function(f){ ids[f.id] = true; });
-  return ids;
+/* Turn 1's filters first appear at state 2, turn 2's at state 3, turn 3's at
+   state 4 — mirrors the states each turn's agent response lands in. */
+var STATE_FOR_TURN = {1:2, 2:3, 3:4};
+function turnForState(n){
+  if(n >= 4) return 3;
+  if(n === 3) return 2;
+  if(n === 2) return 1;
+  return 0;
 }
-function filterRow(f, turn, isNew, isExtra){
+function filterRow(f, isNew){
   var opts = f.options.map(function(o){
     return '<option' + (o === f.value ? ' selected' : '') + '>' + o + '</option>';
   }).join('');
-  return '<div class="frow ' + f.state + (isNew ? ' rv' : '') + (isExtra ? ' frow-extra' : '') + '" id="frow-' + turn + '-' + f.id + '">' +
+  return '<div class="frow ' + f.state + (isNew ? ' rv' : '') + '" id="frow-' + f.id + '">' +
     '<div class="frow-top"><span class="flabel">' + f.label + '</span>' +
-      (f.state === 'assumed' ? '<span class="fstate">Assumed</span>' : '') +
-      '<button class="fx" title="Remove filter">&#215;</button></div>' +
-    '<label class="fselwrap"><select class="fsel">' + opts + '</select><span class="fcar">&#8250;</span></label>' +
+      (f.state === 'assumed' ? '<span class="fassume" title="Assumed — inferred, not stated">' + ico(I.sparkles, 14) + '</span>' : '') +
+      '<button class="fx" title="Remove filter">' + ico(I.x, 12) + '</button></div>' +
+    '<label class="fselwrap"><select class="fsel">' + opts + '</select><span class="fcar">' + ico(I.chevronDown, 14) + '</span></label>' +
     '<p class="freason"><b>Reason:</b> ' + f.reason + '</p>' +
   '</div>';
 }
-function filtersCard(turn, n){
-  var current = (turn === 1 && n === 3) || (turn === 2 && n === 4) || (turn === 3 && n === 5);
-  var all = FILTERS.filter(function(f){ return f.turn <= turn; });
-  var visibleIds = visibleFilterIds(all);
-  var hiddenCount = 0;
-  var rows = all.map(function(f){
-    var isExtra = visibleIds ? !visibleIds[f.id] : false;
-    if(isExtra) hiddenCount++;
-    return filterRow(f, turn, current && f.turn === turn, isExtra);
+/* Renders the persistent right-hand filters panel for state n — cumulative
+   across turns, not a separate card per turn. Rows belonging to the turn
+   that's newly landing at this exact state animate in; everything carried
+   over from an earlier turn is already settled. */
+function filterPanel(n){
+  var turn = turnForState(n);
+  var head = '<div class="fph"><span class="fic">' + ico(I.filter, 11) + '</span>Filters:</div>';
+  if(turn === 0){
+    return head + '<p class="fp-empty">No filters yet — they&rsquo;ll appear here as the agent reads your requirements.</p>';
+  }
+  var isCurrentState = n === STATE_FOR_TURN[turn];
+  var rows = FILTERS.filter(function(f){ return f.turn <= turn; }).map(function(f){
+    return filterRow(f, isCurrentState && f.turn === turn);
   }).join('');
-  var more = hiddenCount > 0
-    ? '<button class="fmore" data-n="' + hiddenCount + '"><span class="fmore-ic">&#9662;</span><span class="fmore-label">+' + hiddenCount + ' more</span></button>'
-    : '';
-  return '<div class="fcard' + (current ? ' rv' : '') + '" id="fcard-' + turn + '">' +
-    '<div class="fcard-h"><span class="fic">&#9776;</span>Filters:</div>' +
-    rows +
-    more +
-    '<button class="fapply"><span>&#9663;</span>Apply</button>' +
-  '</div>';
+  return head + rows;
 }
 
 /* ---------- turn 2: shortlist ---------- */
@@ -587,11 +637,12 @@ function productStrip(){
 }
 
 function comparisonTable(){
+  var WINNER = 'ANT-518';
   return '<div class="ctable-wrap"><table class="ctable"><thead><tr>' +
     '<th>Model</th><th>Bands</th><th>Connector</th><th>Ground Plane</th>' +
   '</tr></thead><tbody>' +
     CANDIDATES.map(function(c){
-      return '<tr><td class="modelname">' + c.id + '</td><td>' + c.bands + '</td><td>' + c.conn + '</td><td>' + c.gp + '</td></tr>';
+      return '<tr><td class="modelname' + (c.id === WINNER ? ' rec-row' : '') + '">' + c.id + '</td><td>' + c.bands + '</td><td>' + c.conn + '</td><td>' + c.gp + '</td></tr>';
     }).join('') +
   '</tbody></table></div>';
 }
@@ -605,13 +656,13 @@ function candidateNotes(){
 }
 
 function question2(n){
-  return '<p class="aline"' + (n === 4 ? ' data-st="4" id="q2"' : '') + '>I don&rsquo;t have your ground plane availability yet, which is the deciding factor between these three — is a ground plane available at the mount point, or is this a ground-plane-free setup?</p>';
+  return '<p class="aline"' + (n === 3 ? ' data-st="3" id="q2"' : '') + '>I don&rsquo;t have your ground plane availability yet, which is the deciding factor between these three — is a ground plane available at the mount point, or is this a ground-plane-free setup?</p>';
 }
 
 /* ---------- turn 3: recommendation ---------- */
 function reqRow(label, val, ok){
   return '<div class="req' + (ok ? '' : ' miss') + '">' +
-    '<span class="vd ' + (ok ? 'yes' : 'no') + '">' + (ok ? '&#10003;' : '&#10007;') + '</span>' +
+    '<span class="vd ' + (ok ? 'yes' : 'no') + '">' + ico(ok ? I.checkCircle : I.xCircle, 14) + '</span>' +
     '<span><span class="rn">' + label + '</span><span class="rv2">' + val + '</span></span></div>';
 }
 
@@ -619,8 +670,11 @@ var CITE_BY_ID = { 'ANT-521': 2, 'ANT-518': 3, 'ANT-533': 4 };
 function recCard(c, winner){
   var win = c.id === winner;
   return '<div class="rec' + (win ? ' win' : ' out') + '">' +
-    '<div class="rh"><div><div class="pn">' + c.id + citeBadge(CITE_BY_ID[c.id]) + '</div><div class="sub">' + c.desc + '</div></div>' +
-    (win ? '<span class="badge">Recommended</span>' : '<span class="badge alt">Not chosen</span>') + '</div>' +
+    '<div class="rh">' +
+      '<div class="pn">' + c.id + citeBadge(CITE_BY_ID[c.id]) + '</div>' +
+      (win ? '<span class="badge">Recommended</span>' : '') +
+      '<div class="sub">' + c.desc + '</div>' +
+    '</div>' +
     '<div class="reqs">' +
       reqRow('Bands', c.bands, true) +
       reqRow('Connector', c.conn, true) +
@@ -637,18 +691,29 @@ function recommendation(){
 /* ---------- render ---------- */
 function render(n){
   clearTimers();
+  if(typeof hideCitePop === 'function') hideCitePop();
   userScrolled = false;
   intext.className = 'intext ph';
   intext.textContent = 'Ask a follow-up question…';
   infield.classList.remove('hot');
   send.className = 'send';
-  actbar.hidden = n < 3;
+  send.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M6 11l6-6 6 6"/></svg>';
+  actbar.hidden = n < 2 || n === LAST;
 
   if(n === 1 || n === LAST){
     scroll.innerHTML = landing();
   } else {
     scroll.innerHTML = '<div class="convwrap">' + buildFull(n) + '</div>';
   }
+  /* panel is closed by default on every fresh state entry — state 2 is the
+     only state that opens it itself, partway through its own animation, so
+     jumping straight to 3 or 4 shows it already settled open with no replay
+     of that opening move, and 1/5 never show it at all */
+  filterpanel.classList.add('notransition');
+  filterpanel.classList.toggle('open', n === 3 || n === 4);
+  void filterpanel.offsetWidth;
+  filterpanel.classList.remove('notransition');
+  filterpanel.innerHTML = filterPanel(n);
 
   Array.prototype.forEach.call(scroll.querySelectorAll('[data-st="' + n + '"]'), function(el){ el.classList.add('rv'); });
 
@@ -659,47 +724,46 @@ function render(n){
 
 function buildFull(n){
   var h = '';
-  h += userTurn(PROMPT1, n === 2 ? 2 : 0);
+  h += userTurn(PROMPT1);
+
+  if(n >= 2){
+    h += '<div class="turn aturn" id="turn1">';
+    h += '<div class="agent" id="agent1">';
+    if(n === 2) h += thinkingRow();
+    h += reasoningBlock(1, n === 2);
+    h += '<p class="aline' + (n === 2 ? ' rv' : '') + '"' + (n === 2 ? ' id="p1"' : '') + '>For an omnidirectional antenna with minimal nulls, the best-performing designs are typically <b>dipole or monopole-style</b>, since they maintain a fuller 360&deg; radiation pattern with fewer dead zones than directional antennas.</p>';
+    h += '<p class="aline' + (n === 2 ? ' rv' : '') + '"' + (n === 2 ? ' id="p2"' : '') + '>I&rsquo;m also assuming standard <b>50-ohm impedance</b> for this recommendation, since that&rsquo;s the near-universal standard across RF and wireless systems — this rules out a small number of non-standard components. ' + cite(1) + '</p>';
+    h += '<p class="aline' + (n === 2 ? ' rv' : '') + '"' + (n === 2 ? ' id="p3"' : '') + '>Based on these considerations, the candidate pool narrows from 24 to 20 — still too broad a range for me to recommend specific models with confidence. The remaining spread depends heavily on your frequency bands and connector type, both of which significantly affect which antennas are viable for your setup.</p>';
+    h += question1(n);
+    h += metaRow(TS[0], n === 2 ? 'rv' : '', n === 2 ? ' id="mrow1"' : '');
+    h += '</div></div>';
+  }
 
   if(n >= 3){
-    h += '<div class="turn aturn" id="turn1">';
-    h += metaRow(TS[0]);
-    h += '<div class="agent" id="agent1">';
-    if(n === 3) h += thinkingRow();
-    h += reasoningBlock(n);
-    h += filtersCard(1, n);
-    h += '<p class="aline' + (n === 3 ? ' rv' : '') + '"' + (n === 3 ? ' id="p1"' : '') + '>For an omnidirectional antenna with minimal nulls, the best-performing designs are typically <b>dipole or monopole-style</b>, since they maintain a fuller 360&deg; radiation pattern with fewer dead zones than directional antennas.</p>';
-    h += '<p class="aline' + (n === 3 ? ' rv' : '') + '"' + (n === 3 ? ' id="p2"' : '') + '>I&rsquo;m also assuming standard <b>50-ohm impedance</b> for this recommendation, since that&rsquo;s the near-universal standard across RF and wireless systems — this rules out a small number of non-standard components. ' + cite(1) + '</p>';
-    h += '<p class="aline' + (n === 3 ? ' rv' : '') + '"' + (n === 3 ? ' id="p3"' : '') + '>Based on these considerations, the candidate pool narrows from 24 to 20 — still too broad a range for me to recommend specific models with confidence. The remaining spread depends heavily on your frequency bands and connector type, both of which significantly affect which antennas are viable for your setup.</p>';
-    h += question1(n);
+    h += userTurn(PROMPT2, n === 3 ? 3 : 0, 'ut2');
+    h += '<div class="turn aturn" id="turn2">';
+    h += '<div class="agent">';
+    h += reasoningBlock(2, n === 3);
+    h += '<p class="aline"' + (n === 3 ? ' data-st="3" data-k="lead2"' : '') + '>Based on your requirements — an omnidirectional antenna with minimal nulls, supporting LTE and GNSS bands, with a u.FL connector — the candidate pool narrows significantly, from 20 down to 5.</p>';
+    h += '<p class="aline"' + (n === 3 ? ' data-st="3" data-k="why2"' : '') + '>Here&rsquo;s how I arrived at this shortlist: bands and connector type are the two most selective filters in this category, since many antennas only support one band family, and connector mismatches typically require an adapter that reduces reliability.</p>';
+    h += '<div' + (n === 3 ? ' data-st="3" data-k="strip"' : '') + '>' + productStrip() + '</div>';
+    h += '<div' + (n === 3 ? ' data-st="3" data-k="table"' : '') + '>' + comparisonTable() + '</div>';
+    h += '<div' + (n === 3 ? ' data-st="3" data-k="notes"' : '') + '>' + candidateNotes() + '</div>';
+    h += question2(n);
+    h += metaRow(TS[1], '', n === 3 ? ' data-st="3" data-k="mrow2"' : '');
     h += '</div></div>';
   }
 
   if(n >= 4){
-    h += userTurn(PROMPT2, n === 4 ? 4 : 0, 'ut2');
-    h += '<div class="turn aturn" id="turn2">';
-    h += metaRow(TS[1]);
-    h += '<div class="agent">';
-    h += filtersCard(2, n);
-    h += '<p class="aline"' + (n === 4 ? ' data-st="4" data-k="lead2"' : '') + '>Based on your requirements — an omnidirectional antenna with minimal nulls, supporting LTE and GNSS bands, with a u.FL connector — the candidate pool narrows significantly, from 20 down to 5.</p>';
-    h += '<p class="aline"' + (n === 4 ? ' data-st="4" data-k="why2"' : '') + '>Here&rsquo;s how I arrived at this shortlist: bands and connector type are the two most selective filters in this category, since many antennas only support one band family, and connector mismatches typically require an adapter that reduces reliability.</p>';
-    h += '<div' + (n === 4 ? ' data-st="4" data-k="strip"' : '') + '>' + productStrip() + '</div>';
-    h += '<div' + (n === 4 ? ' data-st="4" data-k="table"' : '') + '>' + comparisonTable() + '</div>';
-    h += '<div' + (n === 4 ? ' data-st="4" data-k="notes"' : '') + '>' + candidateNotes() + '</div>';
-    h += question2(n);
-    h += '</div></div>';
-  }
-
-  if(n >= 5){
-    h += userTurn(PROMPT3, n === 5 ? 5 : 0, 'ut3');
+    h += userTurn(PROMPT3, n === 4 ? 4 : 0, 'ut3');
     h += '<div class="turn aturn" id="turn3">';
-    h += metaRow(TS[2]);
     h += '<div class="agent">';
-    h += filtersCard(3, n);
-    h += '<p class="aline"' + (n === 5 ? ' data-st="5" data-k="lead3"' : '') + '>Based on your ground-plane-free mounting constraint, <b>ANT-518</b> is the recommended choice: it maintains reliable omnidirectional performance without a ground plane, unlike ANT-521 and ANT-533, both of which depend on one for their rated performance.</p>';
-    h += '<div' + (n === 5 ? ' data-st="5" data-k="recs"' : '') + '>' + recommendation() + '</div>';
-    h += '<p class="aline"' + (n === 5 ? ' data-st="5" data-k="summary"' : '') + '><b>Summary:</b> ANT-518 is the best fit given your constraints. ' + cite(3) + ' ANT-521 would have been the top pick if a ground plane were available, but it isn&rsquo;t optimized for this setup. ' + cite(2) + ' ANT-533 remains viable only with the added connector adapter, which isn&rsquo;t ideal for a compact frame.</p>';
-    h += '<p class="aline"' + (n === 5 ? ' data-st="5" data-k="close"' : '') + '>Let me know if you have any additional requirements — gain preference or a specific frequency sub-band — and I can refine this further.</p>';
+    h += reasoningBlock(3, n === 4);
+    h += '<p class="aline"' + (n === 4 ? ' data-st="4" data-k="lead3"' : '') + '>Based on your ground-plane-free mounting constraint, <b>ANT-518</b> is the recommended choice: it maintains reliable omnidirectional performance without a ground plane, unlike ANT-521 and ANT-533, both of which depend on one for their rated performance.</p>';
+    h += '<div' + (n === 4 ? ' data-st="4" data-k="recs"' : '') + '>' + recommendation() + '</div>';
+    h += '<p class="aline"' + (n === 4 ? ' data-st="4" data-k="summary"' : '') + '><b>Summary:</b> ANT-518 is the best fit given your constraints. ' + cite(3) + ' ANT-521 would have been the top pick if a ground plane were available, but it isn&rsquo;t optimized for this setup. ' + cite(2) + ' ANT-533 remains viable only with the added connector adapter, which isn&rsquo;t ideal for a compact frame.</p>';
+    h += '<p class="aline"' + (n === 4 ? ' data-st="4" data-k="close"' : '') + '>Let me know if you have any additional requirements — gain preference or a specific frequency sub-band — and I can refine this further.</p>';
+    h += metaRow(TS[2], '', n === 4 ? ' data-st="4" data-k="mrow3"' : '');
     h += '</div></div>';
   }
 
@@ -707,12 +771,18 @@ function buildFull(n){
 }
 
 function show(el, cls){ if(el) el.classList.add(cls || 'in'); }
-/* reveal a filters card, then stagger in the rows that are new this turn */
-function revealCard(id){
-  var card = document.getElementById(id);
-  if(!card) return;
-  show(card);
-  Array.prototype.forEach.call(card.querySelectorAll('.frow.rv'), function(row, i){
+/* dimmed-text fade at the top/bottom of the reasoning block instead of a
+   scrollbar, only when there's actually clipped content in that direction */
+function updateReasoningFade(body){
+  var atTop = body.scrollTop <= 1;
+  var atBottom = body.scrollTop + body.clientHeight >= body.scrollHeight - 1;
+  var scrollable = body.scrollHeight > body.clientHeight + 1;
+  body.classList.toggle('fade-t', scrollable && !atTop);
+  body.classList.toggle('fade-b', scrollable && !atBottom);
+}
+/* stagger in whichever filter rows just landed in the persistent right panel */
+function revealFilterPanel(){
+  Array.prototype.forEach.call(filterpanel.querySelectorAll('.frow.rv'), function(row, i){
     at(240 + i * 160, function(){
       row.classList.add('in');
       row.classList.add('flash');
@@ -728,47 +798,81 @@ scroll.addEventListener('touchmove', function(){ userScrolled = true; }, { passi
 scroll.addEventListener('click', function(e){
   var tog = e.target.closest('.rtog');
   if(tog){
-    var body = document.getElementById('rbody');
+    var body = tog.nextElementSibling;
     if(!body) return;
     var open = body.classList.toggle('open');
-    body.style.maxHeight = open ? body.scrollHeight + 'px' : '0px';
     tog.classList.toggle('closed', !open);
     tog.querySelector('.rlabel').textContent = open ? 'Hide reasoning' : 'Show reasoning';
-    return;
+    if(open){
+      updateReasoningFade(body);
+      body.addEventListener('scroll', function(){ updateReasoningFade(body); }, { passive: true });
+    }
   }
+});
+
+/* filter panel interactions — separate listener, since the panel is a
+   sibling of #scroll now, not nested inside it */
+filterpanel.addEventListener('click', function(e){
   var x = e.target.closest('.fx');
   if(x){
-    var row = x.closest('.frow'), card = x.closest('.fcard');
+    var row = x.closest('.frow');
     row.style.maxHeight = row.offsetHeight + 'px';
     void row.offsetHeight;
     row.classList.add('gone');
-    if(card) card.classList.add('dirty');
     at(320, function(){ if(row.parentNode) row.parentNode.removeChild(row); });
-    return;
-  }
-  var ap = e.target.closest('.fapply');
-  if(ap){
-    var c = ap.closest('.fcard');
-    if(c) c.classList.remove('dirty');
-    ap.classList.add('flash');
-    at(650, function(){ ap.classList.remove('flash'); });
-    return;
-  }
-  var more = e.target.closest('.fmore');
-  if(more){
-    var mcard = more.closest('.fcard');
-    var expanded = mcard.classList.toggle('expanded');
-    more.querySelector('.fmore-label').textContent = expanded ? 'Show less' : '+' + more.dataset.n + ' more';
-  }
-});
-scroll.addEventListener('change', function(e){
-  var sel = e.target.closest('.fsel');
-  if(sel){
-    var card = sel.closest('.fcard');
-    if(card) card.classList.add('dirty');
   }
 });
 function toBottom(force){ if(force || !userScrolled) scroll.scrollTo({ top: scroll.scrollHeight, behavior: 'smooth' }); }
+
+/* ---------- citation popover: a single shared node appended to #frame
+   (not nested inside .scroll), positioned from the trigger's own bounding
+   box each time it's shown. Keeps it from being clipped by .scroll's
+   overflow or painted under the topbar, which a same-context CSS :hover
+   popover can't avoid once the trigger sits near the top of the scroll
+   area. ---------- */
+var frameEl = document.getElementById('frame');
+var citepop = document.createElement('div');
+citepop.className = 'cpop-host';
+frameEl.appendChild(citepop);
+
+function showCitePop(trigger){
+  var num = +trigger.dataset.cite;
+  var c = CITATIONS[num - 1];
+  citepop.innerHTML =
+    '<span class="cpop-src"><span class="globe">' + ico(I.globe, 14) + '</span>rapidflare.ai<span class="ext">' + ico(I.externalLink, 14) + '</span></span>' +
+    '<span class="cpop-title">' + c.title + '</span>' +
+    '<span class="cpop-tag">' + c.tag + '</span>' +
+    '<span class="cpop-quote">&ldquo;' + c.quote + '&rdquo;</span>' +
+    '<span class="cpop-foot">' + citeFooter(num) + '</span>';
+  var frameRect = frameEl.getBoundingClientRect();
+  var trigRect = trigger.getBoundingClientRect();
+  var scale = frameRect.width / 1280;
+  var left = (trigRect.left - frameRect.left) / scale;
+  var top = (trigRect.top - frameRect.top) / scale;
+  var trigH = trigRect.height / scale;
+  citepop.style.left = Math.max(8, Math.min(left, 1280 - 264 - 8)) + 'px';
+  citepop.classList.add('show');
+  var popH = citepop.offsetHeight;
+  var openUp = top - popH - 9 > 60;
+  citepop.style.top = (openUp ? (top - popH - 9) : (top + trigH + 9)) + 'px';
+}
+function hideCitePop(){ citepop.classList.remove('show'); }
+scroll.addEventListener('mouseover', function(e){
+  var t = e.target.closest('.ctag,.cbadge');
+  if(t) showCitePop(t);
+});
+scroll.addEventListener('mouseout', function(e){
+  var t = e.target.closest('.ctag,.cbadge');
+  if(t && !t.contains(e.relatedTarget)) hideCitePop();
+});
+scroll.addEventListener('focusin', function(e){
+  var t = e.target.closest('.ctag,.cbadge');
+  if(t) showCitePop(t);
+});
+scroll.addEventListener('focusout', function(e){
+  var t = e.target.closest('.ctag,.cbadge');
+  if(t) hideCitePop();
+});
 
 /* typing */
 function type(text, dur, done){
@@ -798,36 +902,45 @@ function fire(done){
 /* ---------- per-state animations ---------- */
 var ANIM = {
 
-  1: function(){},
-
-  2: function(){
-    var t = scroll.querySelector('[data-st="2"]');
-    if(t){ t.style.opacity = 0; }
-    type(PROMPT1, 1100, function(){
-      fire(function(){
-        if(t){ t.style.opacity = ''; t.classList.add('in'); }
+  /* landing + initiation combined: pause on the suggestion pills, then fade
+     into the typed prompt and its submission — one continuous take instead
+     of a separate "click to type" state */
+  1: function(){
+    at(1500, function(){
+      type(PROMPT1, 1100, function(){
+        fire(function(){
+          var lwrap = scroll.querySelector('.lwrap');
+          if(lwrap) lwrap.classList.add('out');
+          at(320, function(){
+            scroll.innerHTML = '<div class="convwrap"><div class="turn user rv" id="ut1"><div class="ubub">' + PROMPT1 + '</div></div></div>';
+            void scroll.offsetHeight;
+            at(30, function(){ show(document.getElementById('ut1')); toBottom(true); });
+          });
+        });
       });
     });
   },
 
-  3: function(){
+  2: function(){
     runThinking(function(){
       var think = document.getElementById('think');
       if(think) think.classList.add('out');
       at(240, function(){
         if(think) think.style.display = 'none';
-        show(document.getElementById('rwrap'));
+        show(document.getElementById('rwrap1'));
         at(160, toBottom);
-        at(300, function(){ revealCard('fcard-1'); toBottom(); });
+        at(300, function(){ filterpanel.classList.add('open'); });
+        at(600, function(){ revealFilterPanel(); toBottom(); });
         at(1000, function(){ show(document.getElementById('p1')); toBottom(); });
         at(1400, function(){ show(document.getElementById('p2')); toBottom(); });
         at(1800, function(){ show(document.getElementById('p3')); toBottom(); });
         at(2300, function(){ show(document.getElementById('q1')); toBottom(); });
+        at(2600, function(){ show(document.getElementById('mrow1')); toBottom(); });
       });
     });
   },
 
-  4: function(){
+  3: function(){
     var ut2 = document.getElementById('ut2');
     var turn2 = document.getElementById('turn2');
     if(ut2) ut2.style.opacity = 0;
@@ -836,18 +949,20 @@ var ANIM = {
       fire(function(){
         if(ut2){ ut2.style.opacity = ''; ut2.classList.add('in'); }
         at(280, function(){ show(turn2); toBottom(); });
-        at(560, function(){ revealCard('fcard-2'); toBottom(); });
+        at(560, function(){ revealFilterPanel(); toBottom(); });
+        at(650, function(){ show(document.getElementById('rwrap2')); toBottom(); });
         at(1250, function(){ show(scroll.querySelector('[data-k="lead2"]')); toBottom(); });
         at(1700, function(){ show(scroll.querySelector('[data-k="why2"]')); toBottom(); });
         at(2200, function(){ show(scroll.querySelector('[data-k="strip"]')); toBottom(); });
         at(2700, function(){ show(scroll.querySelector('[data-k="table"]')); toBottom(); });
         at(3200, function(){ show(scroll.querySelector('[data-k="notes"]')); toBottom(); });
         at(3750, function(){ show(document.getElementById('q2')); toBottom(); });
+        at(4050, function(){ show(scroll.querySelector('[data-k="mrow2"]')); toBottom(); });
       });
     });
   },
 
-  5: function(){
+  4: function(){
     var ut3 = document.getElementById('ut3');
     var turn3 = document.getElementById('turn3');
     if(ut3) ut3.style.opacity = 0;
@@ -856,7 +971,8 @@ var ANIM = {
       fire(function(){
         if(ut3){ ut3.style.opacity = ''; ut3.classList.add('in'); }
         at(280, function(){ show(turn3); toBottom(); });
-        at(560, function(){ revealCard('fcard-3'); toBottom(); });
+        at(560, function(){ revealFilterPanel(); toBottom(); });
+        at(650, function(){ show(document.getElementById('rwrap3')); toBottom(); });
         at(1250, function(){ show(scroll.querySelector('[data-k="lead3"]')); toBottom(); });
         at(1650, function(){
           show(scroll.querySelector('[data-k="recs"]'));
@@ -869,11 +985,12 @@ var ANIM = {
         });
         at(2500, function(){ show(scroll.querySelector('[data-k="summary"]')); toBottom(); });
         at(2950, function(){ show(scroll.querySelector('[data-k="close"]')); toBottom(); });
+        at(3250, function(){ show(scroll.querySelector('[data-k="mrow3"]')); toBottom(); });
       });
     });
   },
 
-  6: function(){
+  5: function(){
     var mark = scroll.querySelector('.lmark'), head = scroll.querySelector('.lhead'), pills = scroll.querySelector('.lpills');
     [mark, head, pills].forEach(function(el, i){
       if(!el) return;

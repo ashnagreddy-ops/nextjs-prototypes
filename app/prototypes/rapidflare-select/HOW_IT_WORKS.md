@@ -2,10 +2,9 @@
 
 A prototype of Rapidflare's conversational product-selection agent for electronics/
 semiconductor buyers, built specifically to be screen-recorded. It walks one scripted
-antenna-selection conversation across three user turns through eight discrete states
-(landing, initiation, interpretation, auto-narrow, question, shortlist, recommend,
-reset), each entered by an explicit click rather than autoplay, so each state can be
-recorded in its own clean take.
+antenna-selection conversation across three user turns through five discrete states
+(landing/initiation, interpretation, shortlist, recommend, reset), each entered by an
+explicit click rather than autoplay, so each state can be recorded in its own clean take.
 
 ## The script
 
@@ -26,34 +25,43 @@ The whole prototype is a single static HTML file at
 `public/prototypes/rapidflare-select/index.html`, loaded through a full-bleed
 `<iframe>` in `page.tsx` — the same isolation pattern used by
 [`inkset-kinetic-type`](../inkset-kinetic-type/HOW_IT_WORKS.md). The brief calls for a
-fixed light surface with one indigo accent, matched to specific brand reference
-screenshots, and explicitly *no* dark mode — that's a hard requirement here, not an
-oversight, so it's kept outside the app's Tailwind/shadcn/token tree rather than fought
-into `dark:` variants that don't apply to this piece.
+fixed light surface with a named token palette (`--primary`/`--attention`/`--trace`
+etc.), matched to specific brand reference screenshots, and explicitly *no* dark mode —
+that's a hard requirement here, not an oversight, so it's kept outside the app's
+Tailwind/shadcn/token tree rather than fought into `dark:` variants that don't apply to
+this piece.
 
 Inside the file:
 - A fixed 16:9 `#frame` (1280×720) is scaled to fit the viewport by a `fit()` function,
   so recordings crop consistently regardless of window size.
-- A step control (`#steps`, numbered 1–8, outside the frame) jumps directly to any
-  state and replays its animation from the start; `H` hides it for clean recording,
-  arrow keys step, `R` replays the current state. Nothing auto-advances.
-- All eight states are produced by one `render(n)` function that rebuilds the
+- A step control (`#steps`, outside the frame) jumps directly to any state and replays
+  its animation from the start; `H` hides it for clean recording, arrow keys step, `R`
+  replays the current state. Nothing auto-advances.
+- All five states are produced by one `render(n)` function that rebuilds the
   conversation's HTML from scratch for state `n`, then an `ANIM[n]` entry (a chain of
   `setTimeout`s in a `timers` array, cleared on every `render()` call) drives that
-  state's specific transition. States 6 and 7 re-run the same typing/submit animation
-  used for the opening prompt (`type()` / `fire()`) so each follow-up turn is typed
-  into the input bar in character, not just pasted in.
-- The three narrowing sources — STATED / ASSUMED / ANSWERED — are a single `chip()`
-  helper reused everywhere (the narrowing widget, its legend, requirement rows) so they
-  stay visually consistent by construction rather than by convention.
-- The narrowing counter is an inline card in the agent's own turn (not a side panel),
-  built by `narrowWidget()` / `buildNarrow()`, using stable row ids (`row24`, `row20`,
-  `row5`, `row1`) so each `ANIM` entry can reveal/pulse the exact row for its state.
-- Each agent turn opens with a `metaRow()` — avatar, a small reaction/read-aloud/copy
-  icon row, and a timestamp — matching the reference screenshots' chat-widget chrome.
-  A docked action bar ("Submit an enquiry" / "Request quote" / "Talk to team") and a
-  "Powered by Rapidflare" footer bar sit outside the scrolling transcript, as in the
-  reference.
+  state's specific transition. State 1 combines the landing screen and the first
+  prompt's typing/submit animation into one continuous take: it renders the landing
+  pills, pauses, fades them out, then types and fires the first prompt into the input
+  bar (`type()` / `fire()`). States 3 and 4 replay the same typing/submit choreography
+  for the follow-up turns.
+- A persistent right-hand `.filterpanel` (not inline in the chat) shows the
+  cumulative STATED/ASSUMED filters read from the conversation so far; it's closed by
+  width/padding until state 2 opens it partway through its own reveal sequence, and
+  states 3/4 show it already settled open with no replay of that motion.
+- Each agent turn has its own collapsed-by-default reasoning block (`reasoningBlock()`
+  / the `REASONING` map, one entry per turn) — a plain, no-background region that caps
+  at a fixed height and scrolls internally with a mask-image fade instead of a visible
+  scrollbar once expanded.
+- Citations use a shared popover (`showCitePop()`) appended directly to `#frame` and
+  positioned from the trigger's bounding box, so it's never clipped by `.scroll`'s
+  overflow or painted under the topbar.
+- Each agent turn ends with a `metaRow()` — a reaction/read-aloud/copy icon row and a
+  timestamp — revealed together with the rest of that turn's content rather than
+  sitting statically above it. A docked action bar ("Submit an enquiry" / "Request
+  quote" / "Talk to team") only appears once the agent has actually responded (state 2
+  onward, hidden again on the landing-alike reset state), and a "Powered by Rapidflare"
+  footer bar sits outside the scrolling transcript, as in the reference.
 
 ## Key files
 
@@ -62,10 +70,8 @@ Inside the file:
 
 ## Open questions
 
-- Whether the STATED/ASSUMED/ANSWERED chip system is worth lifting into a shared
-  reference (alongside inkset's motion primitives) for future agent-UI prototypes, or
-  whether it's specific enough to Rapidflare's brief to leave standalone.
-- The reference screenshots show real reaction icons (thumbs, speaker, copy) from an
-  icon font; this prototype uses plain Unicode glyphs instead to avoid pulling in an
-  icon library for a throwaway piece — worth swapping for real icons if this ever
-  graduates past a recording rig.
+- Whether the reasoning-block content per turn (`REASONING[1..3]`) is worth expanding
+  with more turns if the script ever grows past three exchanges.
+- Icon set is hand-authored Lucide-style outline SVGs sized per context (14/16/20px);
+  worth swapping for an actual icon library import if this ever graduates past a
+  recording rig.
