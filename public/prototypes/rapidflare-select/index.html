@@ -185,7 +185,9 @@ table{font-family:inherit}
 .frow-top{display:flex;align-items:center;gap:7px;margin-bottom:6px}
 .flabel{font-size:12.5px;font-weight:600;color:var(--foreground)}
 .fassume{display:inline-flex;align-items:center;color:var(--primary)}
-.fx{margin-left:auto;width:16px;height:16px;display:flex;align-items:center;justify-content:center;color:var(--faint);border-radius:3px}
+.frow-right{margin-left:auto;display:flex;align-items:center;gap:4px}
+.fval{font-size:12px;font-weight:600;color:var(--foreground);font-variant-numeric:tabular-nums;white-space:nowrap}
+.fx{width:16px;height:16px;display:flex;align-items:center;justify-content:center;color:var(--faint);border-radius:3px}
 .fx svg{width:12px;height:12px}
 .fx:hover{color:var(--no);background:var(--muted)}
 .fselwrap{position:relative;display:block}
@@ -193,8 +195,19 @@ table{font-family:inherit}
 .fsel:hover{border-color:var(--graphite)}
 .fsel:focus{outline:none;border-color:var(--primary)}
 .fselwrap .fcar{position:absolute;right:9px;top:50%;transform:translateY(-50%);width:14px;height:14px;color:var(--faint);pointer-events:none;display:flex}
+/* slider filter control — thin track, purple fill up to the thumb (set via
+   JS as a background gradient, since range inputs have no native
+   fill-to-thumb styling that works the same across browsers) */
+.fslwrap{padding:4px 0 2px}
+.frange{-webkit-appearance:none;appearance:none;width:100%;height:4px;border-radius:2px;background:var(--border);outline:none;cursor:pointer;margin:0}
+.frange::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:var(--card);border:2px solid var(--primary);box-shadow:var(--shadow-sm);cursor:pointer}
+.frange::-moz-range-track{height:4px;border-radius:2px;background:var(--border)}
+.frange::-moz-range-progress{height:4px;border-radius:2px;background:var(--primary)}
+.frange::-moz-range-thumb{width:16px;height:16px;border-radius:50%;background:var(--card);border:2px solid var(--primary);box-shadow:var(--shadow-sm);cursor:pointer}
 .freason{margin:6px 0 0;font-size:11.5px;line-height:1.5;color:var(--graphite);max-width:64ch}
 .freason b{color:var(--ink-2);font-weight:600}
+.freason-txt.flash,.fval.flash,#bind-impedance.flash{border-radius:3px;animation:bindflash 1.1s var(--ease)}
+@keyframes bindflash{0%{background:var(--primary-subtle)}100%{background:transparent}}
 .frow.gone{max-height:0;opacity:0;margin:0;padding:0;border-top-width:0;overflow:hidden;transition:max-height .3s var(--ease),opacity .25s var(--ease),padding .3s var(--ease)}
 .frow.flash{animation:frowflash 1.1s var(--ease)}
 @keyframes frowflash{0%{background:rgba(91,95,239,.1)}100%{background:rgba(91,95,239,0)}}
@@ -560,10 +573,16 @@ var FILTERS = [
     value:'Omnidirectional, low-null',
     options:['Omnidirectional, low-null','Omnidirectional','Directional','Any'],
     reason:'You asked for omnidirectional coverage with minimal dead zones.' },
-  { id:'impedance', turn:1, state:'assumed', label:'Impedance',
+  { id:'impedance', turn:1, state:'assumed', label:'Impedance', slider:true,
     value:'50 Ω',
-    options:['50 Ω','75 Ω','Any'],
-    reason:'Standard across RF and wireless systems — rules out non-standard components.' },
+    options:['75 Ω','50 Ω','Any'],
+    reasons:[
+      'You overrode the standard assumption to 75 Ω.',
+      'Standard across RF and wireless systems — rules out non-standard components.',
+      'You removed the impedance constraint entirely.'
+    ],
+    chatText:{'50 Ω':'50-ohm impedance','75 Ω':'75-ohm impedance','Any':'no fixed impedance'},
+    bindId:'bind-impedance' },
   { id:'bands', turn:2, state:'stated', label:'Frequency bands',
     value:'LTE, GNSS',
     options:['LTE, GNSS','LTE only','GNSS only','LTE, GNSS, Wi-Fi','Any'],
@@ -586,16 +605,29 @@ function turnForState(n){
   if(n === 2) return 1;
   return 0;
 }
+function currentReason(f){
+  return f.reasons ? f.reasons[f.options.indexOf(f.value)] : f.reason;
+}
 function filterRow(f, isNew){
-  var opts = f.options.map(function(o){
-    return '<option' + (o === f.value ? ' selected' : '') + '>' + o + '</option>';
-  }).join('');
-  return '<div class="frow ' + f.state + (isNew ? ' rv' : '') + '" id="frow-' + f.id + '">' +
-    '<div class="frow-top"><span class="flabel">' + f.label + '</span>' +
+  var top = '<div class="frow-top"><span class="flabel">' + f.label + '</span>' +
       (f.state === 'assumed' ? '<span class="fassume" title="Assumed — inferred, not stated">' + ico(I.sparkles, 14) + '</span>' : '') +
-      '<button class="fx" title="Remove filter">' + ico(I.x, 12) + '</button></div>' +
-    '<label class="fselwrap"><select class="fsel">' + opts + '</select><span class="fcar">' + ico(I.chevronDown, 14) + '</span></label>' +
-    '<p class="freason"><b>Reason:</b> ' + f.reason + '</p>' +
+      '<span class="frow-right">' +
+        (f.slider ? '<span class="fval">' + f.value + '</span>' : '') +
+        '<button class="fx" title="Remove filter">' + ico(I.x, 12) + '</button>' +
+      '</span></div>';
+  var control;
+  if(f.slider){
+    var idx = f.options.indexOf(f.value);
+    control = '<div class="fslwrap"><input type="range" class="frange" data-id="' + f.id + '" min="0" max="' + (f.options.length - 1) + '" step="1" value="' + idx + '"></div>';
+  } else {
+    var opts = f.options.map(function(o){
+      return '<option' + (o === f.value ? ' selected' : '') + '>' + o + '</option>';
+    }).join('');
+    control = '<label class="fselwrap"><select class="fsel">' + opts + '</select><span class="fcar">' + ico(I.chevronDown, 14) + '</span></label>';
+  }
+  return '<div class="frow ' + f.state + (isNew ? ' rv' : '') + '" id="frow-' + f.id + '">' +
+    top + control +
+    '<p class="freason"><b>Reason:</b> <span class="freason-txt">' + currentReason(f) + '</span></p>' +
   '</div>';
 }
 /* Renders the persistent right-hand filters panel for state n — cumulative
@@ -714,6 +746,7 @@ function render(n){
   void filterpanel.offsetWidth;
   filterpanel.classList.remove('notransition');
   filterpanel.innerHTML = filterPanel(n);
+  Array.prototype.forEach.call(filterpanel.querySelectorAll('.frange'), updateRangeFill);
 
   Array.prototype.forEach.call(scroll.querySelectorAll('[data-st="' + n + '"]'), function(el){ el.classList.add('rv'); });
 
@@ -732,7 +765,7 @@ function buildFull(n){
     if(n === 2) h += thinkingRow();
     h += reasoningBlock(1, n === 2);
     h += '<p class="aline' + (n === 2 ? ' rv' : '') + '"' + (n === 2 ? ' id="p1"' : '') + '>For an omnidirectional antenna with minimal nulls, the best-performing designs are typically <b>dipole or monopole-style</b>, since they maintain a fuller 360&deg; radiation pattern with fewer dead zones than directional antennas.</p>';
-    h += '<p class="aline' + (n === 2 ? ' rv' : '') + '"' + (n === 2 ? ' id="p2"' : '') + '>I&rsquo;m also assuming standard <b>50-ohm impedance</b> for this recommendation, since that&rsquo;s the near-universal standard across RF and wireless systems — this rules out a small number of non-standard components. ' + cite(1) + '</p>';
+    h += '<p class="aline' + (n === 2 ? ' rv' : '') + '"' + (n === 2 ? ' id="p2"' : '') + '>I&rsquo;m also assuming standard <b id="bind-impedance">50-ohm impedance</b> for this recommendation, since that&rsquo;s the near-universal standard across RF and wireless systems — this rules out a small number of non-standard components. ' + cite(1) + '</p>';
     h += '<p class="aline' + (n === 2 ? ' rv' : '') + '"' + (n === 2 ? ' id="p3"' : '') + '>Based on these considerations, the candidate pool narrows from 24 to 20 — still too broad a range for me to recommend specific models with confidence. The remaining spread depends heavily on your frequency bands and connector type, both of which significantly affect which antennas are viable for your setup.</p>';
     h += question1(n);
     h += metaRow(TS[0], n === 2 ? 'rv' : '', n === 2 ? ' id="mrow1"' : '');
@@ -820,6 +853,44 @@ filterpanel.addEventListener('click', function(e){
     void row.offsetHeight;
     row.classList.add('gone');
     at(320, function(){ if(row.parentNode) row.parentNode.removeChild(row); });
+  }
+});
+
+/* slider filters — dragging the thumb re-runs that filter's value, reason,
+   and the one place its value is echoed back in the agent's own response,
+   so moving a slider visibly updates both sides at once */
+function updateRangeFill(input){
+  var min = +input.min, max = +input.max, val = +input.value;
+  var pct = max === min ? 0 : ((val - min) / (max - min)) * 100;
+  input.style.background = 'linear-gradient(to right, var(--primary) 0%, var(--primary) ' + pct + '%, var(--border) ' + pct + '%, var(--border) 100%)';
+}
+function flashEl(el){
+  if(!el) return;
+  el.classList.remove('flash');
+  void el.offsetWidth;
+  el.classList.add('flash');
+  at(1150, function(){ el.classList.remove('flash'); });
+}
+filterpanel.addEventListener('input', function(e){
+  var input = e.target.closest('.frange');
+  if(!input) return;
+  updateRangeFill(input);
+  var f = FILTERS.filter(function(x){ return x.id === input.dataset.id; })[0];
+  if(!f) return;
+  f.value = f.options[+input.value];
+  var row = input.closest('.frow');
+  var valEl = row.querySelector('.fval');
+  if(valEl) valEl.textContent = f.value;
+  var reasonEl = row.querySelector('.freason-txt');
+  if(reasonEl) reasonEl.textContent = currentReason(f);
+  flashEl(reasonEl);
+  flashEl(row.querySelector('.fval'));
+  if(f.bindId && f.chatText){
+    var bound = document.getElementById(f.bindId);
+    if(bound){
+      bound.textContent = f.chatText[f.value] || f.value;
+      flashEl(bound);
+    }
   }
 });
 function toBottom(force){ if(force || !userScrolled) scroll.scrollTo({ top: scroll.scrollHeight, behavior: 'smooth' }); }
