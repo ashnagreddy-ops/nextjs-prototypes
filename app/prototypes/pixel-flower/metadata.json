@@ -1,0 +1,8 @@
+{
+  "title": "Pixel Flower",
+  "description": "Animated pixel-mosaic flower bouquet: smooth vector blooms are rasterised to a tiny offscreen grid, then re-drawn as jittered painterly cells with intro bloom, sway, drifting petals and cursor repel.",
+  "tags": ["canvas", "motion", "pixel-art", "hero", "generative"],
+  "createdAt": "2026-09-22T00:00:00.000Z",
+  "updatedAt": "2026-09-22T00:00:00.000Z",
+  "hidden": false
+}
