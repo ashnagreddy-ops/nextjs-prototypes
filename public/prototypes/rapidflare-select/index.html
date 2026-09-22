@@ -87,8 +87,6 @@ table{font-family:inherit}
 .navitem .ic{width:16px;height:16px;flex:none;display:flex;align-items:center;justify-content:center}
 .navitem:hover{background:rgba(255,255,255,.06);color:#fff}
 .navitem.active{background:rgba(255,255,255,.12);color:#fff;font-weight:600}
-.newconvo{display:flex;align-items:center;justify-content:center;gap:7px;background:rgba(91,95,239,.55);color:var(--primary-foreground);border-radius:9px;padding:10px;font-size:12.5px;font-weight:600;margin-bottom:18px;transition:background var(--duration-base) var(--ease-out)}
-.newconvo:hover{background:rgba(91,95,239,.7)}
 .recent-eyebrow{font-size:11px;font-weight:600;color:rgba(255,255,255,.42);margin-bottom:8px}
 .convgroup{margin-bottom:4px}
 .convgroup .gl{font-size:10px;color:rgba(255,255,255,.38);margin:8px 4px 4px}
@@ -224,14 +222,15 @@ table{font-family:inherit}
    sequentially in JS (content fades out and finishes, then the curtain
    fades in — never both at once) so there's never a moment where old text
    is legible through the loading state */
-.recalcwrap > .aline,.recalcwrap .pstrip,.recalcwrap .ctable-wrap,.recalcwrap .cnotes{transition:opacity .25s var(--ease)}
-.recalcwrap.content-hidden > .aline,.recalcwrap.content-hidden .pstrip,.recalcwrap.content-hidden .ctable-wrap,.recalcwrap.content-hidden .cnotes{opacity:0}
+.recalcwrap > .aline,.recalcwrap .pstrip,.recalcwrap .ctable-wrap,.recalcwrap .cnotes,.recalcwrap > .rblock{transition:opacity .25s var(--ease)}
+.recalcwrap.content-hidden > .aline,.recalcwrap.content-hidden .pstrip,.recalcwrap.content-hidden .ctable-wrap,.recalcwrap.content-hidden .cnotes,.recalcwrap.content-hidden > .rblock{opacity:0}
 /* the feedback-icon/timestamp row sits after recalcwrap (it must stay the
    very last element in the turn), so it's faded by the same class name
    applied directly to it rather than via a recalcwrap-descendant selector */
 .mrow{transition:opacity .25s var(--ease)}
 .mrow.content-hidden{opacity:0}
-.reload-overlay{position:absolute;inset:0;z-index:2;display:flex;flex-direction:column;gap:12px;padding-top:2px;background:var(--card);opacity:0;pointer-events:none;transition:opacity .25s var(--ease)}
+.reload-overlay{position:absolute;inset:0;z-index:2;display:flex;align-items:flex-start;justify-content:flex-start;padding-top:2px;background:var(--card);opacity:0;pointer-events:none;transition:opacity .25s var(--ease)}
+.reload-overlay .think{margin-bottom:0}
 .reload-overlay.show{opacity:1;pointer-events:auto}
 /* a paragraph added *after* the reload (the recalc confirmation) starts
    genuinely collapsed — not just opacity:0 — so it reserves no space while
@@ -240,13 +239,6 @@ table{font-family:inherit}
    reading as inconsistent spacing during the loading phase. JS sets an
    explicit max-height at reveal time since a max-height transition can't
    target "auto." */
-.recalc-collapse{max-height:0;opacity:0;overflow:hidden;margin:0;transition:max-height .45s var(--ease),opacity .35s var(--ease),margin .45s var(--ease)}
-.recalc-collapse.in{opacity:1;margin:0 0 10px}
-.skel-line,.skel-card,.skel-table{border-radius:var(--radius-sm);background:linear-gradient(90deg,var(--muted) 25%,var(--hairline-2) 37%,var(--muted) 63%);background-size:400% 100%;animation:shimmersweep 1.4s ease-in-out infinite}
-.skel-line{height:11px}
-.skel-cards{display:flex;gap:10px}
-.skel-card{flex:1;height:58px}
-.skel-table{height:92px}
 
 /* product card strip */
 .pstrip{margin-bottom:14px}
@@ -380,7 +372,6 @@ table{font-family:inherit}
             <button class="navitem"><span class="ic"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6M9 13h6M9 17h6M9 9h1"/></svg></span>Notes</button>
             <button class="navitem"><span class="ic"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 2 9 5-9 5-9-5 9-5Z"/><path d="m3 12 9 5 9-5"/><path d="m3 17 9 5 9-5"/></svg></span>Collections</button>
           </div>
-          <button class="newconvo"><span style="width:16px;height:16px;display:flex"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></span>New Conversation</button>
           <div class="recent-eyebrow">Recent Conversations</div>
           <div class="convgroup">
             <div class="gl">Today</div>
@@ -557,27 +548,39 @@ function userTurn(text, st, id, extraClass){
 
 /* ---------- turn 1: the transcript paragraphs, plain, in full ---------- */
 var THINK_VERBS = ['Reading the request', 'Weighing antenna types', 'Checking impedance'];
+var RECALC_VERBS = ['Re-checking radiation pattern', 'Validating against 80&nbsp;&Omega;', 'Re-narrowing the candidate pool'];
 function thinkingRow(){
   return '<div class="think" id="think"><span class="think-ico"></span><span class="think-verb" id="thinkVerb">' + THINK_VERBS[0] + '</span></div>';
 }
-function runThinking(done){
-  var el = document.getElementById('thinkVerb');
+function recalcThinkRow(){
+  return '<div class="think" id="recalcThink"><span class="think-ico"></span><span class="think-verb" id="recalcThinkVerb">' + RECALC_VERBS[0] + '</span></div>';
+}
+/* drives a thinking row's verb-cycle to completion, then calls done — used
+   both for the initial interpretation "thinking" and for the recalculate
+   state's own processing indicator, just pointed at different verb lists
+   and DOM ids */
+function cycleVerbs(verbs, verbElId, done){
+  var el = document.getElementById(verbElId);
   if(!el){ if(done) done(); return; }
   var i = 0;
   function step(){
     i++;
-    if(i >= THINK_VERBS.length){ at(380, done); return; }
+    if(i >= verbs.length){ at(380, done); return; }
     el.classList.add('out');
     at(180, function(){
-      el.textContent = THINK_VERBS[i];
+      el.innerHTML = verbs[i];
       el.classList.remove('out');
       at(430, step);
     });
   }
   at(430, step);
 }
+function runThinking(done){ cycleVerbs(THINK_VERBS, 'thinkVerb', done); }
 function question1(n){
-  return '<p class="aline' + (n === 1 ? ' rv' : '') + '"' + (n === 1 ? ' id="q1"' : '') + '>Could you let me know what frequency bands this needs to support, and what connector type your board uses?</p>';
+  /* id is always present (not just when n===1) so ANIM[2] has a stable
+     anchor to insert the recalc-confirmation sentence before, once the
+     recalculation actually completes */
+  return '<p class="aline' + (n === 1 ? ' rv' : '') + '" id="q1">Could you let me know what frequency bands this needs to support, and what connector type your board uses?</p>';
 }
 
 /* ---------- reasoning block (turn 1 only, collapsed by default) ---------- */
@@ -601,7 +604,7 @@ var REASONING = {
     '<p>The one trade-off worth surfacing is beamwidth: ANT-518 runs slightly wider than ANT-521. That&rsquo;s a minor difference next to a hard mounting constraint, so it doesn&rsquo;t change the recommendation.</p>'
 };
 function reasoningBlock(turn, reveal){
-  return '<div' + (reveal ? ' class="rv" id="rwrap' + turn + '"' : '') + '>' +
+  return '<div class="rblock' + (reveal ? ' rv' : '') + '"' + (reveal ? ' id="rwrap' + turn + '"' : '') + '>' +
     '<button class="rtog closed"><span class="bulb">' + ico(I.idea, 14) + '</span><span class="rlabel">Show reasoning</span><span class="car">' + ico(I.chevronDown, 14) + '</span></button>' +
     '<div class="rbody">' + REASONING[turn] + '</div></div>';
 }
@@ -619,7 +622,10 @@ var FILTERS = [
       if(v > 50) return 'You raised this to ' + v + ' Ω, above the 50 Ω standard.';
       return 'You lowered this to ' + v + ' Ω, below the 50 Ω standard.';
     },
-    chatText:function(v){ return v === 50 ? '50-ohm impedance' : v + '-ohm impedance'; },
+    chatText:function(v){
+      if(v === 50) return 'I&rsquo;m also assuming standard <b>50-ohm impedance</b> for this recommendation, since that&rsquo;s the near-universal standard across RF and wireless systems — this rules out a small number of non-standard components. ' + cite(1);
+      return 'You&rsquo;ve set impedance to <b>' + v + '-ohm</b> yourself, ' + (v > 50 ? 'above' : 'below') + ' the 50-ohm standard I&rsquo;d otherwise assume — I&rsquo;ll match candidates against this value instead.';
+    },
     bindId:'bind-impedance' },
   { id:'bands', turn:2, state:'stated', label:'Frequency bands',
     value:'LTE, GNSS',
@@ -820,23 +826,36 @@ function buildFull(n){
   h += '<div class="turn aturn" id="turn1">';
   h += '<div class="agent" id="agent1">';
   if(n === 1) h += thinkingRow();
-  h += reasoningBlock(1, n === 1);
+  /* state 2 opens still showing turn 1's un-recalculated response — the
+     slider itself is the thing the user is watching move, so "processing"
+     (hiding this text, thinking cycle, new text) doesn't start until that
+     drag actually finishes; only n===2's OWN in-progress animation ever
+     hides it, never the initial paint */
   h += '<div class="recalcwrap" id="recalcwrap1">';
+  h += reasoningBlock(1, n === 1);
   h += '<p class="aline' + (n === 1 ? ' rv' : '') + '"' + (n === 1 ? ' id="p1"' : '') + '>For an omnidirectional antenna with minimal nulls, the best-performing designs are typically <b>dipole or monopole-style</b>, since they maintain a fuller 360&deg; radiation pattern with fewer dead zones than directional antennas.</p>';
-  h += '<p class="aline' + (n === 1 ? ' rv' : '') + '"' + (n === 1 ? ' id="p2"' : '') + '>I&rsquo;m also assuming standard <b id="bind-impedance">50-ohm impedance</b> for this recommendation, since that&rsquo;s the near-universal standard across RF and wireless systems — this rules out a small number of non-standard components. ' + cite(1) + '</p>';
+  /* the impedance echo is generated from the same chatText() the live slider
+     drag uses, keyed off the value this state should actually show (50 up
+     through Recalculate's own starting point, 80 once it's actually landed)
+     — otherwise this paragraph is hardcoded to the pre-recalculate wording
+     and reverts to "assuming 50-ohm" on every state after 2, even though the
+     filter panel already says 80&nbsp;&Omega; */
+  var impFilterDef = FILTERS.filter(function(f){ return f.id === 'impedance'; })[0];
+  var impValForState = n > 2 ? 80 : 50;
+  h += '<p class="aline' + (n === 1 ? ' rv' : '') + '"' + (n === 1 ? ' id="p2"' : '') + '><span id="bind-impedance">' + impFilterDef.chatText(impValForState) + '</span></p>';
   h += '<p class="aline' + (n === 1 ? ' rv' : '') + '"' + (n === 1 ? ' id="p3"' : '') + '>Based on these considerations, the candidate pool narrows from 24 to 20 — still too broad a range for me to recommend specific models with confidence. The remaining spread depends heavily on your frequency bands and connector type, both of which significantly affect which antennas are viable for your setup.</p>';
-  h += question1(n);
-  h += '<div class="reload-overlay" id="reloadOverlay1">' +
-    '<div class="skel-line" style="width:88%"></div>' +
-    '<div class="skel-line" style="width:95%"></div>' +
-    '<div class="skel-line" style="width:63%"></div>' +
-    '<div class="skel-line" style="width:79%"></div>' +
-  '</div>';
-  h += '</div>';
-  if(n >= 2){
-    h += '<p class="aline' + (n === 2 ? ' recalc-collapse' : '') + '"' + (n === 2 ? ' data-st="2" data-k="recalc1"' : '') + '>I&rsquo;ve rechecked this against the updated 80&nbsp;&Omega; impedance target — the omnidirectional, low-null pattern requirement is unaffected, and the candidate pool still narrows to 20.</p>';
+  /* only stated statically once the recalculation has actually landed
+     (n > 2) — at n===2 itself the sentence doesn't exist yet in the DOM at
+     all, so there's no window where it sits next to the still-current
+     "assuming 50-ohm" text and contradicts it. ANIM[2] inserts it once the
+     recalculation completes, while the response is already hidden. */
+  if(n > 2){
+    h += '<p class="aline">I&rsquo;ve rechecked this against the updated 80&nbsp;&Omega; impedance target — the omnidirectional, low-null pattern requirement is unaffected, and the candidate pool still narrows to 20.</p>';
   }
-  h += metaRow(TS[0], '', (n === 1 ? ' data-st="1" data-k="mrow1"' : '') + ' id="mrow1el"');
+  h += question1(n);
+  h += '<div class="reload-overlay" id="reloadOverlay1">' + recalcThinkRow() + '</div>';
+  h += '</div>';
+  h += metaRow(TS[0], n === 1 ? 'rv' : '', (n === 1 ? ' data-k="mrow1"' : '') + ' id="mrow1el"');
   h += '</div></div>';
 
   if(n >= 3){
@@ -949,7 +968,7 @@ function flashRow(row){
    steps, so a scripted state can visibly slide a filter to a new value the
    same way a dragged thumb would — reusing the real update path instead of
    a separate fake animation */
-function animateSliderTo(id, target, dur, done){
+function animateSliderTo(id, target, dur, done, deferBind){
   var input = filterpanel.querySelector('.frange[data-id="' + id + '"]');
   if(!input){ if(done) done(); return; }
   var start = +input.value;
@@ -961,11 +980,24 @@ function animateSliderTo(id, target, dur, done){
     var eased = 1 - Math.pow(1 - t, 3); /* ease-out cubic — glides to a stop instead of a linear snap */
     var v = Math.round(start + (target - start) * eased);
     input.value = v;
-    input.dispatchEvent(new CustomEvent('input', { bubbles: true, detail: { silent: i < steps } }));
+    input.dispatchEvent(new CustomEvent('input', { bubbles: true, detail: { silent: i < steps, deferBind: !!deferBind } }));
     if(i < steps) at(dur / steps, tick);
     else if(done) done();
   }
   tick();
+}
+/* the chat-text echo (e.g. "50-ohm impedance" in the turn-1 paragraph) is
+   applied here so both a real drag and the scripted recalculate replay use
+   the exact same update path — the scripted path just calls this itself,
+   later, once the response is already hidden under the loading state,
+   instead of letting it fire immediately on the slider's last tick */
+function applyBindUpdate(f){
+  if(!f.bindId) return;
+  var bound = document.getElementById(f.bindId);
+  if(!bound) return;
+  var text = typeof f.chatText === 'function' ? f.chatText(f.value) : (f.chatText && f.chatText[f.value]) || f.value;
+  bound.innerHTML = text;
+  flashEl(bound);
 }
 filterpanel.addEventListener('input', function(e){
   var input = e.target.closest('.frange');
@@ -986,14 +1018,10 @@ filterpanel.addEventListener('input', function(e){
   if(reasonEl) reasonEl.textContent = currentReason(f);
   flashEl(reasonEl);
   flashEl(valEl);
-  if(f.bindId){
-    var bound = document.getElementById(f.bindId);
-    if(bound){
-      var text = typeof f.chatText === 'function' ? f.chatText(f.value) : (f.chatText && f.chatText[f.value]) || f.value;
-      bound.textContent = text;
-      flashEl(bound);
-    }
-  }
+  /* the scripted recalculate replay sets deferBind so the chat-text echo
+     doesn't flash to its new wording while the old response is still fully
+     visible, a beat before the loading curtain even starts covering it */
+  if(!(e.detail && e.detail.deferBind)) applyBindUpdate(f);
 });
 function toBottom(force){ if(force || !userScrolled) scroll.scrollTo({ top: scroll.scrollHeight, behavior: 'smooth' }); }
 
@@ -1121,44 +1149,55 @@ var ANIM = {
      pattern (the only other turn-1 filter) shimmer, then land the agent's
      own confirmation that the 24→20 narrowing still holds */
   2: function(){
-    at(500, function(){
-      animateSliderTo('impedance', 80, 950, function(){
-        at(350, function(){
-          var patternRow = document.getElementById('frow-pattern');
-          var wrap = document.getElementById('recalcwrap1');
-          var overlay = document.getElementById('reloadOverlay1');
-          var mrow1 = document.getElementById('mrow1el');
-          /* sequenced, not simultaneous: let the old content fully fade to
-             nothing first, then bring the skeleton in — otherwise the two
-             cross-fade and old text stays legible through the loading state */
-          if(wrap) wrap.classList.add('content-hidden');
-          if(mrow1) mrow1.classList.add('content-hidden');
-          toBottom();
+    var patternRow = document.getElementById('frow-pattern');
+    var wrap = document.getElementById('recalcwrap1');
+    var overlay = document.getElementById('reloadOverlay1');
+    var mrow1 = document.getElementById('mrow1el');
+    var q1 = document.getElementById('q1');
+    /* the response stays exactly as it looked at the end of state 1 —
+       readable, not hidden — for as long as the slider itself is still
+       moving; reprocessing only starts once that drag actually lands on 80,
+       not on a fixed timer racing it in parallel. deferBind=true means the
+       chat-text echo update is applied manually below, once the response is
+       hidden, rather than on the slider's own last tick */
+    animateSliderTo('impedance', 80, 950, function(){
+      if(wrap) wrap.classList.add('content-hidden');
+      if(mrow1) mrow1.classList.add('content-hidden');
+      toBottom();
+      at(260, function(){
+        var impF = FILTERS.filter(function(x){ return x.id === 'impedance'; })[0];
+        if(impF) applyBindUpdate(impF);
+        /* the recalc-confirmation sentence doesn't exist in the DOM yet at
+           this point (buildFull only renders it statically once n > 2) — it
+           gets inserted here, while everything is already faded to opacity
+           0, so it fades back in already in place instead of growing the
+           layout after the fact */
+        if(q1 && !document.getElementById('recalcNote1')){
+          q1.insertAdjacentHTML('beforebegin', '<p class="aline" id="recalcNote1">I&rsquo;ve rechecked this against the updated 80&nbsp;&Omega; impedance target — the omnidirectional, low-null pattern requirement is unaffected, and the candidate pool still narrows to 20.</p>');
+        }
+        if(overlay) overlay.classList.add('show');
+        if(patternRow) patternRow.classList.add('shimmer');
+        toBottom();
+        /* same verb-cycling "thinking" indicator used for the initial
+           interpretation, just pointed at recalculation-appropriate
+           phrases — its own completion (not a fixed timer) paces how
+           long the response stays hidden, and it now covers the same
+           area the "Show reasoning" toggle sat in, matching how page 1
+           shows a single processing state before its real content */
+        cycleVerbs(RECALC_VERBS, 'recalcThinkVerb', function(){
+          if(overlay) overlay.classList.remove('show');
+          if(patternRow){ patternRow.classList.remove('shimmer'); }
           at(260, function(){
-            if(overlay) overlay.classList.add('show');
-            if(patternRow) patternRow.classList.add('shimmer');
+            if(wrap) wrap.classList.remove('content-hidden');
             toBottom();
-            /* full response sits under the skeleton curtain for a couple of
-               seconds — long enough to read as "regenerating," not a glitch */
-            at(2300, function(){
-              if(overlay) overlay.classList.remove('show');
-              if(patternRow){ patternRow.classList.remove('shimmer'); }
-              at(260, function(){
-                if(wrap) wrap.classList.remove('content-hidden');
-                if(mrow1) mrow1.classList.remove('content-hidden');
-                if(patternRow) flashRow(patternRow);
-                toBottom();
-                at(300, function(){
-                  var recalc1 = scroll.querySelector('[data-k="recalc1"]');
-                  if(recalc1){ recalc1.style.maxHeight = recalc1.scrollHeight + 'px'; show(recalc1); }
-                  toBottom();
-                });
-              });
+            at(500, function(){
+              if(mrow1) mrow1.classList.remove('content-hidden');
+              toBottom();
             });
           });
         });
       });
-    });
+    }, true);
   },
 
   3: function(){
