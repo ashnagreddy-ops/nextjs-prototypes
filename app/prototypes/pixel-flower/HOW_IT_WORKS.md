@@ -15,11 +15,23 @@ so the cell pattern never changes and edges never shimmer.
 (1 unit = 1 cell, stem base at `(0,0)`, y negative upward, bouquet ≈ 48×64 cells): four stems, three
 leaves, four blooms and the open flower's centre. Bloom shapes are smooth paths, no edge noise:
 a closed bud is a U cup taller than wide with three pointed tips (middle tallest) and one darker
-seam; the open flower is five rounded radial petals with seeded ±10% size/rotation variation, each
-shifted up or down the ramp by how much it faces the top-right light, with a deeper base shadow, a
-pale ridge along its midline, a firmer outline on the shadow side, and a bright coral-red
-(`PALETTE.accent`, `#F6727E`) crescent near the tip of the lit petals; the centre is a small graded
-brown eye about two cells across; the half-open bloom is a lobed cup with two outer petals curling outward. Each bloom
+seam; the open flower is five broad radial petals with a slight draw-in near the tip so the silhouette
+shows soft lobes rather than a smooth circle (the outline is waved along its outer half and then
+smoothed once so nothing reads as a spike; seeded ±20% size and ±14° rotation; bases overlapping past
+the centre so it cups) quantised to its own 14-tone `PALETTE.bloom` ramp, deeper and
+more saturated than the bud pinks and running up to a near-white blush. Each petal has its own
+gradient from pale at the centre to saturated rose at the tip, shifted lighter or deeper by how much
+it faces the top-left light, a soft lit ridge along its upper-left curve and a shadow along its
+lower-right edge. Over that, in bloom space, a whole-flower falloff lifts the top-left toward blush and pulls the
+bottom-right into deep rose, and a full throat ring (1–2 cells, visible all round, peaking at
+near-white on its lower-right) hugs the centre. The two or three petals facing the light also carry a
+small near-white specular spot on their upper-left ridge. Back (upper) petals draw first one step deeper; front (lower) petals
+draw last. Petal separations are four straight spokes from the centre, one step darker, fading out
+halfway to the edge. The centre is a small soft pit (~3×3 cells): `#5C2A22` with `#3A1512` on its
+upper-left cell or two and a muted `#B8434F` glint lower-right. In cell space the open flower's quantised
+indices get a 3×3 median over its own cells (removing single-cell speckle from the overlapping
+gradients while keeping the colour bands), and it darkens one step only along its bottom-right outer
+edge (buds keep the below/left rim); the half-open bloom is a lobed cup with two outer petals curling outward. Each bloom
 is shaded as one form by a linear gradient in its local frame with evenly spaced stops over the
 whole 14-tone pink ramp, lit from the top-right (white-pink there, through the mids to deep rose and
 crimson toward the bottom-left; buds run top to bottom instead, with an extra darkening on the right
@@ -82,7 +94,8 @@ pop out together. Blooms lose no cells.
 **Cursor repel.** Baked cells carry a spring displacement pushed by the pointer and clamped to one
 cell (`repel.maxCells`), springing back to rest.
 
-**Debug view.** Press **D** to overlay the full-resolution vector layer beside the baked grid.
+**Debug view.** Press **D** to overlay the full-resolution vector layer beside the baked grid; the
+page text hides while it is up so the panel can fill the left side.
 
 **Lifecycle.** `requestAnimationFrame` loop paused on `visibilitychange` and by an
 `IntersectionObserver`; resize is debounced 150ms and re-bakes. `prefers-reduced-motion` bakes and
@@ -92,9 +105,8 @@ bottom-up build-in.
 **Tuning.**
 - `BOUQUET` — bloom kind, attach point, tilt, size and seed (draw order = back to front); leaf
   origins, angles, tip angles and lengths; the gather height, stem slots, root pinch and stem width.
-- `PALETTE` — the quantised pinks (14 steps dark → light: the base swatches plus interpolated
-  midpoints, so bands stay 1–3 cells wide and the gradient reads as seamless), greens, and the centre
-  eye's brown-to-rose ramp, and `accent`, which lives in the pink family under a reserved index so
+- `PALETTE` — the quantised pinks for buds and petals (14 steps dark → light), the open flower's
+  own 14-tone `bloom` ramp (deep crimson through rich coral to near-white blush), greens, and the centre eye's brown-to-rose ramp, and `accent`, which lives in the pink family under a reserved index so
   the bake can quantise to it but the shading passes leave it untouched.
 - `CONFIG` — cell size, alpha threshold, bake noise, intro, sway (speed, amplitude, bloom lag, stem
   blend rows, leaf flutter), petal timing/motion/tumble, repel constants, debug key. Colours are literal hex, a deliberate

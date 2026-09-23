@@ -38,9 +38,15 @@ export const PALETTE = {
     "#7A1F2A", "#8E2733", "#9E2F3A", "#AB3A45", "#B8434F", "#C24F5A", "#CC5A64",
     "#D46670", "#DB737B", "#E68D93", "#EB9BA0", "#F0A9AD", "#F4B8BA", "#F7C6C8",
   ],
+  // open-flower ramp, dark → light: deeper and more saturated than `pink`,
+  // running up to a near-white blush so the petals can carry more steps
+  bloom: [
+    "#7E1F2B", "#8E2634", "#9E2F3A", "#B0374A", "#C3405A", "#D64B62", "#E45C6C",
+    "#EE6F7A", "#F5858C", "#F89BA1", "#FAB3B7", "#FCC8CA", "#FDDADB", "#FBE3E4",
+  ],
   green: ["#1F4A22", "#2C5F2B", "#3B7433", "#4E8A3C", "#6A9F48"],
   // centre eye: dark brown out through warm brown and dusty rose, plus a glint
-  center: ["#3A1512", "#4A1E1A", "#5C2A22", "#74392E", "#8E4A40", "#A85E58", "#C07A76", "#D9979A", "#F7C6C8"],
+  center: ["#3A1512", "#4A1E1A", "#5C2A22", "#74392E", "#8E4A40", "#A85E58", "#C07A76", "#D9979A", "#F7C6C8", "#B8434F"],
   accent: "#F6727E", // bright coral-red highlight on the lit petal tips
 } as const
 const PMAX = PALETTE.pink.length - 1
@@ -122,6 +128,7 @@ function hexToRgb(hex: string): [number, number, number] {
 }
 const RGB = {
   pink: [...PALETTE.pink, PALETTE.accent].map(hexToRgb),
+  bloom: PALETTE.bloom.map(hexToRgb),
   green: PALETTE.green.map(hexToRgb),
   center: PALETTE.center.map(hexToRgb),
 }
@@ -212,92 +219,183 @@ function drawBud(ctx: Ctx) {
   highlight(ctx, 1.4, -8, 1, 1.8)
 }
 
-// open flower: five rounded radial petals with ±10% variation
-function petalPath(ctx: Ctx, len: number, w: number) {
+// open flower: five radial petals shaded as a cupped BOWL seen from above.
+// Each petal has its own gradient (pale near the centre → saturated rose at
+// the tip) with a lit ridge on its upper-left curve and a shadow on its
+// lower-right edge; the bowl lighting (lower-right interior brighter) and a
+// full throat ring are layered on top in bloom space.
+const B = PALETTE.bloom
+// the same teardrop, sampled as a polygon with a gentle wave (≤ ~0.8 cell)
+// along its outer half so the rim isn't a perfect curve
+function wavyPetalPath(ctx: Ctx, len: number, w: number, seed: number) {
+  const N = 56
+  const pts: [number, number][] = []
+  for (let k = 0; k < N; k++) {
+    const th = (k / N) * Math.PI * 2
+    const t = (1 - Math.cos(th)) / 2 // 0 at base, 1 at tip
+    const sn = Math.sin(th)
+    // the broad rounded lobe from before, with only a slight draw-in near the
+    // very tip so each lobe reads as a soft bump (about one cell of lobing)
+    const lobe = 1 - 0.16 * Math.pow(t, 4)
+    const x = (w / 2) * Math.sign(sn) * Math.pow(Math.abs(sn), 0.72) * (0.3 + 0.7 * Math.sqrt(t)) * lobe
+    const y = -len * t
+    pts.push([x, y])
+  }
+  // gentle wave along the outer half
+  const waved: [number, number][] = pts.map(([x, y], k) => {
+    const [px, py] = pts[(k + N - 1) % N], [nx2, ny2] = pts[(k + 1) % N]
+    const tx = nx2 - px, ty = ny2 - py
+    const tl = Math.hypot(tx, ty) || 1
+    const nx = -ty / tl, ny = tx / tl
+    const th = (k / N) * Math.PI * 2
+    const t = (1 - Math.cos(th)) / 2
+    const wave = 0.7 * Math.sin(th * 4 + seed) * t * t
+    return [x + nx * wave, y + ny * wave]
+  })
+  // one smoothing pass (average with neighbours) so nothing reads as a spike
+  const sm: [number, number][] = waved.map(([x, y], k) => {
+    const [ax, ay] = waved[(k + N - 1) % N], [bx, by] = waved[(k + 1) % N]
+    return [(ax + x + bx) / 3, (ay + y + by) / 3]
+  })
   ctx.beginPath()
-  ctx.moveTo(0, 0)
-  ctx.bezierCurveTo(w * 0.55, -len * 0.15, w * 0.62, -len * 0.75, w * 0.18, -len)
-  ctx.quadraticCurveTo(0, -len * 1.04, -w * 0.18, -len)
-  ctx.bezierCurveTo(-w * 0.62, -len * 0.75, -w * 0.55, -len * 0.15, 0, 0)
+  sm.forEach(([x, y], k) => (k === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y)))
   ctx.closePath()
 }
+const EYE: [number, number] = [-0.4, 0.1]
 function drawOpen(ctx: Ctx, seed: number) {
-  const n = 5, len = 9.5, w = 8.2, ring = -0.6
+  const n = 5, len = 11, w = 11.2, ring = -2 // broad lobes whose bases overlap past the centre → cupped
+  const R = len
+  // bowl lighting, layered over the per-petal gradients: upper-left interior
+  // shaded, lower-right interior lit
+  // whole-flower light: a clear falloff from the lit top-left (lifted toward
+  // blush) to the shadowed bottom-right (pulled into deep rose)
+  const bowl = ctx.createLinearGradient(-R * 0.9, -R * 0.9, R * 0.9, R * 0.9)
+  bowl.addColorStop(0, "rgba(251,227,228,0.42)")
+  bowl.addColorStop(0.38, "rgba(251,227,228,0)")
+  bowl.addColorStop(0.55, "rgba(126,31,43,0)")
+  bowl.addColorStop(1, "rgba(126,31,43,0.6)")
+  // full throat ring hugging the centre: visible all the way round,
+  // brightest lower-right
+  const throat = ctx.createRadialGradient(EYE[0], EYE[1], 1.3, EYE[0], EYE[1], 3.9)
+  throat.addColorStop(0, "rgba(249,210,211,0.95)")
+  throat.addColorStop(0.5, "rgba(247,198,200,0.75)")
+  throat.addColorStop(1, "rgba(247,198,200,0)")
+  const throatLR = ctx.createRadialGradient(EYE[0] + 1.2, EYE[1] + 1.1, 0.8, EYE[0] + 1.2, EYE[1] + 1.1, 2.7)
+  throatLR.addColorStop(0, "rgba(253,236,237,0.98)")
+  throatLR.addColorStop(0.5, "rgba(251,227,228,0.7)")
+  throatLR.addColorStop(1, "rgba(251,227,228,0)")
+
+  type P = { ang: number; sz: number; cy: number; lit: number; seed: number }
+  const petals: P[] = []
   for (let i = 0; i < n; i++) {
-    const ang = (i / n) * 360 + 90 + (hash2(seed, i, 1) - 0.5) * 20 // ±10° rotation
-    const sz = 1 + (hash2(seed, i, 2) - 0.5) * 0.2 // ±10% size
-    // how much this petal faces the top-right light: lit petals shift up the
-    // ramp, shaded petals shift down, so each petal reads as its own plane
-    const lit = Math.cos(rad(ang)) * 0.7 + Math.sin(rad(ang)) * 0.7 // +1 facing top-right, −1 bottom-left
-    const shift = Math.round(lit * 2.5)
+    const ang = (i / n) * 360 + 90 + (hash2(seed, i, 1) - 0.5) * 28 // ±14° rotation
+    const sz = 1 + (hash2(seed, i, 2) - 0.5) * 0.4 // ±20% size
+    const dir = [Math.cos(rad(ang)), -Math.sin(rad(ang))]
+    petals.push({ ang, sz, cy: dir[1], lit: -dir[0] * 0.707 - dir[1] * 0.707, seed: seed * 7 + i })
+  }
+  const byAngle = petals.slice()
+  petals.sort((a, b) => a.cy - b.cy) // back (upper) petals first, front (lower) last
+  const withPetal = (p: P, fn: () => void) => {
     ctx.save()
-    ctx.rotate(rad(-ang) + Math.PI / 2)
+    ctx.rotate(rad(-p.ang) + Math.PI / 2)
     ctx.translate(0, -ring)
-    ctx.scale(sz, sz)
-    ctx.fillStyle = bloomGradient(ctx, 11, shift)
-    petalPath(ctx, len, w)
-    ctx.fill()
-    // deeper base and a soft crimson underside so the petal has a belly
-    ctx.fillStyle = baseShadow(ctx, 0, 0.5, len * 0.55, 0.6)
-    petalPath(ctx, len, w)
-    ctx.fill()
-    ctx.save()
-    petalPath(ctx, len, w)
-    ctx.clip()
-    // pale ridge along the petal's midline (a fold catching the light)
-    const ridge = ctx.createLinearGradient(-w * 0.2, 0, w * 0.2, 0)
-    ridge.addColorStop(0, "rgba(244,184,186,0)")
-    ridge.addColorStop(0.5, `rgba(244,184,186,${0.35 + 0.25 * lit})`)
-    ridge.addColorStop(1, "rgba(244,184,186,0)")
-    ctx.fillStyle = ridge
-    ctx.fillRect(-w * 0.2, -len * 0.78, w * 0.4, len * 0.62)
-    // bright coral-red crescent near the tip on the lit side
-    if (lit > -0.2) {
-      ctx.fillStyle = PALETTE.accent
-      ctx.globalAlpha = 0.9
-      ctx.beginPath()
-      ctx.ellipse(w * 0.12, -len * 0.7, w * 0.3, len * 0.11, -0.35, 0, Math.PI * 2)
-      ctx.fill()
-      ctx.globalAlpha = 1
-    }
-    ctx.restore()
-    // outline: firmer on the shadow side so overlapping petals separate
-    ctx.strokeStyle = `rgba(122,31,42,${lit > 0 ? 0.3 : 0.5})`
-    ctx.lineWidth = 0.45
-    petalPath(ctx, len, w)
-    ctx.stroke()
+    ctx.scale(p.sz, p.sz)
+    fn()
     ctx.restore()
   }
-  // pale halo just outside the centre eye
-  const halo = ctx.createRadialGradient(-0.4, 0.1, 2, -0.4, 0.1, 4.4)
-  halo.addColorStop(0, "rgba(247,198,200,0.8)")
-  halo.addColorStop(0.5, "rgba(247,198,200,0.3)")
-  halo.addColorStop(1, "rgba(247,198,200,0)")
-  ctx.fillStyle = halo
-  ctx.beginPath()
-  ctx.arc(-0.4, 0.1, 4.4, 0, Math.PI * 2)
-  ctx.fill()
-  highlight(ctx, 3.5, -7.5, 2.2, 1.3)
+  for (const p of petals) {
+    const front = p.cy > 0
+    withPetal(p, () => {
+      wavyPetalPath(ctx, len, w, p.seed)
+      ctx.clip()
+      // per-petal gradient: pale at the base (centre) → saturated rose at the tip
+      // petals facing the light stay coral to the tip; those facing away go deep rose
+      const shift = Math.round(p.lit * 3.5) // −3 … +3 ramp steps
+      const g = ctx.createLinearGradient(0, 0, 0, -len)
+      g.addColorStop(0, B[clampi(11 + shift, 0, 13)])
+      g.addColorStop(0.35, B[clampi(9 + shift, 0, 13)])
+      g.addColorStop(0.7, B[clampi(6 + shift, 0, 13)])
+      g.addColorStop(1, B[clampi(3 + shift, 0, 13)])
+      ctx.fillStyle = g
+      ctx.fillRect(-w, -len * 1.2, w * 2, len * 1.4)
+      // bloom-space layers: undo the petal transform for them
+      ctx.save()
+      ctx.scale(1 / p.sz, 1 / p.sz)
+      ctx.translate(0, ring)
+      ctx.rotate(-(rad(-p.ang) + Math.PI / 2))
+      ctx.fillStyle = bowl
+      ctx.fillRect(-R * 1.6, -R * 1.6, R * 3.2, R * 3.2)
+      ctx.fillStyle = throat
+      ctx.fillRect(-R * 1.6, -R * 1.6, R * 3.2, R * 3.2)
+      ctx.fillStyle = throatLR
+      ctx.fillRect(-R * 1.6, -R * 1.6, R * 3.2, R * 3.2)
+      if (!front) { // back petals one step deeper
+        ctx.fillStyle = "rgba(158,47,58,0.1)"
+        ctx.fillRect(-R * 1.6, -R * 1.6, R * 3.2, R * 3.2)
+      }
+      ctx.restore()
+      // lit ridge along the upper-left curve of the petal (its left flank,
+      // outer half) and a soft shadow along the lower-right edge (right flank)
+      ctx.lineWidth = 0.8
+      ctx.save()
+      ctx.beginPath()
+      ctx.rect(-w, -len * 1.2, w, len * 0.9)
+      ctx.clip()
+      ctx.strokeStyle = p.lit > 0 ? "rgba(253,236,237,0.85)" : "rgba(251,227,228,0.5)"
+      wavyPetalPath(ctx, len, w, p.seed)
+      ctx.stroke()
+      ctx.restore()
+      // specular catch: a small near-white spot on the raised upper-left ridge
+      // of the most lit petals (2–3 of them), distinct from the throat glow
+      if (p.lit > 0.25) {
+        ctx.fillStyle = "rgba(255,246,246,0.97)"
+        ctx.beginPath()
+        ctx.ellipse(-w * 0.26, -len * 0.64, 1.0, 0.6, -0.6, 0, Math.PI * 2)
+        ctx.fill()
+      }
+      ctx.save()
+      ctx.beginPath()
+      ctx.rect(0, -len * 1.2, w, len * 1.3)
+      ctx.clip()
+      ctx.strokeStyle = "rgba(158,47,58,0.4)"
+      ctx.lineWidth = 0.9
+      wavyPetalPath(ctx, len, w, p.seed)
+      ctx.stroke()
+      ctx.restore()
+    })
+  }
+  // radial seams between petals: one step darker, fading out halfway to the edge
+  for (let i = 0; i < n; i++) {
+    if (i === 2) continue
+    const a = byAngle[i].ang, b = byAngle[(i + 1) % n].ang + (i === n - 1 ? 360 : 0)
+    const mid = rad((a + b) / 2)
+    const dx = Math.cos(mid), dy = -Math.sin(mid)
+    const r0 = 2, r1 = R * 0.5
+    const sg = ctx.createLinearGradient(dx * r0, dy * r0, dx * r1, dy * r1)
+    sg.addColorStop(0, "rgba(158,47,58,0.5)")
+    sg.addColorStop(1, "rgba(158,47,58,0)")
+    ctx.strokeStyle = sg
+    ctx.lineWidth = 0.9
+    ctx.beginPath()
+    ctx.moveTo(dx * r0, dy * r0)
+    ctx.lineTo(dx * r1, dy * r1)
+    ctx.stroke()
+  }
 }
 function drawCenter(ctx: Ctx) {
-  // graded eye: near-black brown in the middle, warm browns, then dusty rose
+  // small, soft pit (~3×3 cells): #5C2A22 with #3A1512 on the upper-left
+  // cell or two, and a muted rather than bright highlight lower-right
   const c = PALETTE.center
-  const g = ctx.createRadialGradient(-0.5, 0.1, 0, -0.4, 0.1, 2.15)
+  const g = ctx.createLinearGradient(EYE[0] - 1.4, EYE[1] - 1.3, EYE[0] + 1.2, EYE[1] + 1.1)
   g.addColorStop(0, c[0])
-  g.addColorStop(0.3, c[1])
-  g.addColorStop(0.48, c[2])
-  g.addColorStop(0.62, c[3])
-  g.addColorStop(0.74, c[4])
-  g.addColorStop(0.85, c[5])
-  g.addColorStop(0.94, c[6])
-  g.addColorStop(1, c[7])
+  g.addColorStop(0.35, c[2])
+  g.addColorStop(1, c[2])
   ctx.fillStyle = g
   ctx.beginPath()
-  ctx.ellipse(-0.4, 0.1, 2.15, 1.9, -0.3, 0, Math.PI * 2)
+  ctx.ellipse(EYE[0], EYE[1], 1.5, 1.4, -0.3, 0, Math.PI * 2)
   ctx.fill()
-  // one glint cell, upper-left of the eye
-  ctx.fillStyle = c[8]
-  ctx.fillRect(-1.4, -0.9, 0.8, 0.8)
+  ctx.fillStyle = PALETTE.pink[4] // #B8434F, muted glint
+  ctx.fillRect(EYE[0] + 0.15, EYE[1] + 0.15, 0.7, 0.7)
 }
 
 // half-open bloom: cup with the two outer petals curling outward
@@ -426,7 +524,7 @@ function buildParts(): Part[] {
   })
   blooms.forEach((b, i) => {
     const draw = b.kind === "bud" ? drawBud : b.kind === "half" ? drawHalf : (ctx: Ctx) => drawOpen(ctx, b.seed)
-    parts.push({ id: `bloom-${i}`, kind: "bloom", family: "pink", bloom: i, draw: withBloom(b, draw) })
+    parts.push({ id: `bloom-${i}`, kind: "bloom", family: b.kind === "open" ? "bloom" : "pink", bloom: i, draw: withBloom(b, draw) })
     if (b.kind === "open") parts.push({ id: `center-${i}`, kind: "center", family: "center", bloom: i, draw: withBloom(b, drawCenter) })
   })
   return parts
@@ -565,11 +663,29 @@ export default function PixelFlower({ className }: { className?: string }) {
       const famMax = (pi: number) => RGB[parts[pi].family].length - 1
       const at = (c: number, r: number) => (c < 0 || r < 0 || c >= cols || r >= rows ? -1 : partOf[r * cols + c])
 
+      // open flower: a 3×3 median over its own cells removes single-cell speckle
+      // left by overlapping gradients while keeping the colour bands intact
+      {
+        const src = idx.slice()
+        const buf: number[] = []
+        for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
+          const i = r * cols + c, pi = partOf[i]
+          if (pi < 0 || parts[pi].family !== "bloom") continue
+          buf.length = 0
+          for (let dr = -1; dr <= 1; dr++) for (let dc = -1; dc <= 1; dc++) {
+            const q = at(c + dc, r + dr)
+            if (q === pi) buf.push(src[(r + dr) * cols + c + dc])
+          }
+          buf.sort((a, b) => a - b)
+          idx[i] = buf[buf.length >> 1]
+        }
+      }
+
       // blooms: optional smooth noise, then darken cells bordering a bloom in front
       const noiseSeed = 77
       for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
         const i = r * cols + c, pi = partOf[i]
-        if (pi < 0 || parts[pi].kind !== "bloom" || idx[i] === ACCENT) continue
+        if (pi < 0 || parts[pi].kind !== "bloom" || (parts[pi].family === "pink" && idx[i] === ACCENT)) continue
         let k = idx[i]
         if (CONFIG.bakeNoise.enabled) {
           const nz = valueNoise(c / CONFIG.bakeNoise.scale, r / CONFIG.bakeNoise.scale, noiseSeed)
@@ -582,10 +698,20 @@ export default function PixelFlower({ className }: { className?: string }) {
           if (q >= 0 && parts[q].bloom !== me && parts[q].bloom >= 0 && parts[q].bloom > me) { k -= 1; break }
         }
         // shadow-side rim: a couple of ramp steps deeper where the bloom meets
-        // background below / to the left (one ramp step is subtle on the 14-tone ramp)
-        if (at(c, r + 1) < 0) k -= 2
-        if (at(c - 1, r) < 0) k -= 1
-        idx[i] = clampi(k, 0, PMAX)
+        // background below / to the left (one ramp step is subtle on the 14-tone ramp).
+        // The open flower is a bowl lit convexly only at its rims, so it darkens
+        // just its bottom-right outer edge.
+        if (BOUQUET.blooms[me]?.kind === "open") {
+          // at most one step, and only on the bottom-right quadrant's outer edge
+          const b = BOUQUET.blooms[me]
+          const bc = baseX + b.at[0] * sceneScale, br = baseY + b.at[1] * sceneScale
+          const bottomEdge = at(c, r + 1) < 0 && c >= bc - 1, rightEdge = at(c + 1, r) < 0 && r >= br - 1
+          if (bottomEdge || rightEdge) k -= 1
+        } else {
+          if (at(c, r + 1) < 0) k -= 2
+          if (at(c - 1, r) < 0) k -= 1
+        }
+        idx[i] = clampi(k, 0, RGB[parts[pi].family].length - 1)
       }
 
       // stems: shade across each stem's width per row, boundaries, bottom, shadow
@@ -645,7 +771,9 @@ export default function PixelFlower({ className }: { className?: string }) {
         const c = i % cols, r = (i - c) / cols, pi = partOf[i], part = parts[pi]
         cCol[k] = c; cRow[k] = r; cPart[k] = pi
         const fam = part.family
-        cColor[k] = fam === "pink" ? (idx[i] === ACCENT ? PALETTE.accent : PALETTE.pink[idx[i]]) : fam === "green" ? PALETTE.green[idx[i]] : PALETTE.center[idx[i]]
+        cColor[k] = fam === "pink" ? (idx[i] === ACCENT ? PALETTE.accent : PALETTE.pink[idx[i]])
+          : fam === "bloom" ? PALETTE.bloom[idx[i]]
+          : fam === "green" ? PALETTE.green[idx[i]] : PALETTE.center[idx[i]]
         cGroup[k] = part.kind === "stem" ? 0 : part.kind === "leaf" ? 2 : 1
         if (part.kind === "leaf") {
           // how far along the blade this cell sits, so the tip sways most
@@ -748,7 +876,8 @@ export default function PixelFlower({ className }: { className?: string }) {
     }
 
     function drawDebug() {
-      const scale = Math.min(0.5, (H - 48) / (vec.height / dpr))
+      // as large as the left half allows, so the vector shading can be judged
+      const scale = Math.min((H - 64) / (vec.height / dpr), (Math.max(regionX, W * 0.45) - 48) / (vec.width / dpr))
       const w = (vec.width / dpr) * scale, h = (vec.height / dpr) * scale
       const x = 24, y = H - h - 24
       ctx.fillStyle = "rgba(247,245,241,0.94)"
@@ -884,6 +1013,8 @@ export default function PixelFlower({ className }: { className?: string }) {
     const onKey = (e: KeyboardEvent) => {
       if (e.key.toLowerCase() === CONFIG.debugKey && !e.metaKey && !e.ctrlKey) {
         debug = !debug
+        // the page text sits above the canvas; hide it while the vector panel is up
+        parent.querySelectorAll<HTMLElement>("nav, section").forEach((el) => { el.style.visibility = debug ? "hidden" : "" })
         if (reduced) render(performance.now(), 0)
       }
     }
