@@ -20,14 +20,19 @@ shows soft lobes rather than a smooth circle (the outline is waved along its out
 smoothed once so nothing reads as a spike; seeded ±20% size and ±14° rotation; bases overlapping past
 the centre so it cups) quantised to its own 14-tone `PALETTE.bloom` ramp, deeper and
 more saturated than the bud pinks and running up to a near-white blush. Each petal has its own
-gradient from pale at the centre to saturated rose at the tip, shifted lighter or deeper by how much
-it faces the top-left light, a soft lit ridge along its upper-left curve and a shadow along its
-lower-right edge. Over that, in bloom space, a whole-flower falloff lifts the top-left toward blush and pulls the
-bottom-right into deep rose, and a full throat ring (1–2 cells, visible all round, peaking at
-near-white on its lower-right) hugs the centre. The two or three petals facing the light also carry a
-small near-white specular spot on their upper-left ridge. Back (upper) petals draw first one step deeper; front (lower) petals
+gradient from pale at the centre to saturated rose at the tip, shifted deeper on the top-left petals and lighter on the bottom-right ones, a soft lit ridge along its upper-left curve and a shadow along its
+lower-right edge. Over that, in bloom space, a whole-flower falloff pulls the top-left into deep rose and lifts the
+bottom-right toward blush (the shadow sits top-left, the light bottom-right), and a full throat ring (1–2 cells, visible all round, peaking at
+near-white on its lower-right) hugs the centre. The shadowed top-left petals carry two short pale ridge strokes each and the two or three most
+lit ones a small near-white specular spot, and in cell space a low-frequency mottle lifts small
+clusters inside the darker tones by one or two steps, so the dark areas read as light catching on
+the surface rather than one smooth ramp. A short deep-rose arc hugs the centre's upper-left (the rim's
+shadow falling into the pit), a deeper wash sits on the bottom-left lobe, another deepens the inner fold on the right side between
+the centre and the right petals, a few small softer mid-pink dabs and two deep-rose streaks running horizontally inward from the
+edge sit inside the dark top-left patch so it isn't one flat tone, and in cell space the bottom-left outer edge darkens two steps. Back (upper) petals draw first one step deeper; front (lower) petals
 draw last. Petal separations are four straight spokes from the centre, one step darker, fading out
-halfway to the edge. The centre is a small soft pit (~3×3 cells): `#5C2A22` with `#3A1512` on its
+halfway to the edge. The centre sits a little down and to the right of the bloom's origin and is a small soft pit
+(~3×3 cells): `#5C2A22` with `#3A1512` on its
 upper-left cell or two and a muted `#B8434F` glint lower-right. In cell space the open flower's quantised
 indices get a 3×3 median over its own cells (removing single-cell speckle from the overlapping
 gradients while keeping the colour bands), and it darkens one step only along its bottom-right outer
