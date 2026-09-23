@@ -51,26 +51,33 @@ shifted so the bouquet is centred in its region, and the second pass bakes at th
 The bouquet scales to `region.heightFrac` of the viewport height on desktop (cells stay the same size;
 the bouquet just spans more of them).
 
-The result is packed into struct-of-arrays (`cCol`, `cRow`, `cColor`, `cGroup`, `cLag`) plus, per
-bloom, a list of its edge cells and colours for spawning petals. A full-resolution render of the same
+The result is packed into struct-of-arrays (`cCol`, `cRow`, `cColor`, `cGroup`, `cLag`). A full-resolution render of the same
 parts goes to a second canvas for the debug view.
 
 **Animate.** Every frame draws only the baked cells. Sway is a per-*row* horizontal offset:
-`sin(t·0.8) · 10px · (heightFromBottom/totalHeight)²`, so the base row is fixed and the top leans
+`sin(t·speed) · amplitudePx · (heightFromBottom/totalHeight)²` (22px at the top by default), so the base row is fixed and the top leans
 most. Bloom cells use the phase `t − 0.25s`; stem cells blend from the bloom phase at their top row
 to the stem phase four rows down (`cLag`), so the joint never tears. Leaf cells store how far along the blade
-they sit and add their own flutter (`sway.leafPx`, squared toward the tip, on a slightly faster
-offset sine) on top of the stem sway, so the two low leaves visibly move even though the row-based
-sway is near zero at the bottom. Every x/y is rounded to device pixels and each cell is drawn one device pixel wider, which removes hairline
+they sit and which leaf they belong to, and flutter *up and down* (`sway.leafPx`, squared toward the
+tip) with a smaller sideways component, each leaf on its own rhythm and phase, so the two low leaves
+visibly bob out of step even though the row-based sway is near zero at the bottom. Every x/y is rounded to device pixels and each cell is drawn one device pixel wider, which removes hairline
 seams between neighbours.
 
-**Falling petals.** Every 1.5–3s a petal spawns on a random edge cell on the *right-hand side* of
-a random bloom (max six on screen), coloured from that cell's palette index ±1 so the sprite has a
-light top row, mid middle and darker bottom. It is a soft-cornered 4×3 oval with the corners removed; `petals.tumble` (off by default) cycles
-through 3×3 and 1×3 frames for a flipping look. It accelerates
-to a terminal speed of ~40px/s, drifts on a horizontal sine (15–25px amplitude, 1.5–2.5s period)
-with a wind that always blows rightward and strengthens when the sway leans right, so petals only ever
-fall on the bouquet's right, and fades over the bottom 20% of the viewport. Blooms lose no cells.
+**Falling petals.** Every 1.5–3s a petal sheds from one spot just behind the top-right bud
+(`petals.source`: bloom index, offset in cells, jitter; max six on screen), in a mid pink with a
+lighter and darker tone two ramp steps either side. The petal layer is drawn *beneath* the baked
+cells, so petals emerge from behind the bouquet instead of appearing in front of it. It is one oval form (an ellipse about 5×4 cells, `ovalSprite`) rasterised at a random diagonal
+orientation at spawn (20–70° or 110–160°, so none is ever flat or upright), all the same clean shape
+and none spinning; shaded light at the upper-left to dark at the lower-right; `petals.tumble` (off by default) cycles through smaller
+frames for a flipping look. It is thrown softly out to the right (`petals.launch`: an initial rightward
+velocity with a slight upward pop) and drag eases that push toward the ambient wind while gravity
+accelerates it quickly toward ~120px/s, so it arcs out from behind the bud and drops. One very
+slow, small lean (2–5px over 4–7s) plus a per-petal breeze (smooth value-noise gusts, `petals.breeze`,
+sideways with a little lift) roughens the arc without any zig-zag. The wind
+always blows rightward and strengthens when the sway leans right, so petals only ever fall on the
+bouquet's right; they fade over the bottom 20% of the viewport. Spawn gaps are irregular: a squared random over 0.35–3.2s skews toward short gaps with occasional
+long pauses, and `petals.pairChance` sometimes fires a second petal 80–300ms behind the first so two
+pop out together. Blooms lose no cells.
 
 **Cursor repel.** Baked cells carry a spring displacement pushed by the pointer and clamped to one
 cell (`repel.maxCells`), springing back to rest.

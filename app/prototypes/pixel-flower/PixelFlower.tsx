@@ -13,11 +13,18 @@ export const CONFIG = {
   alphaThreshold: 128, // bake: a cell is either fully on or off
   bakeNoise: { enabled: false, scale: 6, threshold: 0.6 }, // smooth ±1 step on blooms, baked once
   intro: { enabled: false, duration: 1800, cellDelay: 120, cellPop: 180 },
-  sway: { speed: 1.15, amplitudePx: 10, bloomLag: 0.25, stemBlendRows: 4, leafPx: 7, leafPhase: 0.9 },
+  sway: { speed: 1.15, amplitudePx: 22, bloomLag: 0.25, stemBlendRows: 4, leafPx: 9, leafPhase: 0.9 },
   petals: {
-    interval: [1.5, 3], max: 6, terminal: 40, accel: 45,
-    driftAmp: [15, 25], driftPeriod: [1.5, 2.5], wind: 6, frameMs: 150, fadeFrac: 0.2,
+    interval: [0.35, 3.2], max: 7, terminal: 120, accel: 160,
+    pairChance: 0.3, pairGap: [0.08, 0.3], // sometimes a second petal pops out right behind the first
+    breeze: { strength: 28, rate: 0.9 }, // smooth per-petal gusts (px/s) on top of the arc
+    // thrown softly out to the right from behind the bud, then drag slows the
+    // sideways push toward the ambient wind while gravity takes over
+    launch: { vx: [60, 130], vy: [-40, -10], drag: 1.0 },
+    // a single very slow lean, not a swing: the path reads as a clean arc
+    driftAmp: [2, 5], driftPeriod: [4, 7], wind: 9, frameMs: 150, fadeFrac: 0.2,
     tumble: false, // true cycles the sprite frames for a flip; false keeps one soft oval
+    source: { bloom: 0, offset: [4, -5] as [number, number], jitter: 2 }, // shed from behind this bloom (cells from its anchor)
   },
   repel: { radius: 90, strength: 380, spring: 90, damping: 11, maxCells: 1 },
   scene: { width: 48, height: 64 }, // bouquet size in cells; stem base at (0,0), y up = negative
@@ -428,14 +435,31 @@ function buildParts(): Part[] {
 // ---------------------------------------------------------------------------
 // falling petals
 // ---------------------------------------------------------------------------
-type Petal = { x: number; y: number; vy: number; x0: number; amp: number; period: number; phase: number; born: number; colors: [string, string, string]; dead: boolean }
-// soft-cornered ovals: wide 4×3, mid 3×3, thin 1×3 (corners removed)
+type Petal = { x: number; y: number; vx: number; vy: number; x0: number; amp: number; period: number; phase: number; born: number; colors: [string, string, string]; frame: number; cells: [number, number][]; seed: number; dead: boolean }
+// rounded petal blobs (corner cells removed): 5×4 and 4×4, chosen per petal;
+// each petal is then rotated to its own angle and snapped to the grid at spawn.
+// The smaller frames are used only when `petals.tumble` is on.
 const PETAL_FRAMES: [number, number][][] = [
+  [[1, 0], [2, 0], [3, 0], [0, 1], [1, 1], [2, 1], [3, 1], [4, 1], [0, 2], [1, 2], [2, 2], [3, 2], [4, 2], [1, 3], [2, 3], [3, 3]],
+  [[1, 0], [2, 0], [0, 1], [1, 1], [2, 1], [3, 1], [0, 2], [1, 2], [2, 2], [3, 2], [1, 3], [2, 3]],
   [[1, 0], [2, 0], [0, 1], [1, 1], [2, 1], [3, 1], [1, 2], [2, 2]],
-  [[1, 0], [0, 1], [1, 1], [2, 1], [1, 2]],
   [[1, 0], [1, 1], [1, 2]],
 ]
-const FRAME_CYCLE = [0, 1, 2, 1]
+// one oval form at any orientation: rasterise an ellipse (radii in cells)
+// rotated by `angle`, sampling cell centres, so a horizontal, vertical or
+// diagonal oval all keep the same clean shape
+function ovalSprite(angle: number, rx = 2.7, ry = 2.0): [number, number][] {
+  const c = Math.cos(angle), sn = Math.sin(angle)
+  const out: [number, number][] = []
+  const R = Math.ceil(rx)
+  for (let y = -R; y <= R; y++)
+    for (let x = -R; x <= R; x++) {
+      const u = x * c + y * sn, v = -x * sn + y * c // into the ellipse's frame
+      if ((u / rx) ** 2 + (v / ry) ** 2 <= 1) out.push([x + R, y + R])
+    }
+  return out
+}
+const FRAME_CYCLE = [1, 2, 3, 2]
 
 // ---------------------------------------------------------------------------
 // component
@@ -469,10 +493,10 @@ export default function PixelFlower({ className }: { className?: string }) {
     let cCol = new Int16Array(0), cRow = new Int16Array(0), cPart = new Int16Array(0)
     let cColor: string[] = []
     let cGroup = new Int8Array(0) // 0 stem, 1 bloom/center, 2 leaf
+    let cLeaf = new Int8Array(0) // leaf index for group 2 (each leaf gets its own flutter timing)
     let cLag = new Float32Array(0) // 0 = stem phase, 1 = bloom phase
     let cDelay = new Float32Array(0)
     let ox = new Float32Array(0), oy = new Float32Array(0), vx = new Float32Array(0), vy = new Float32Array(0)
-    let bloomEdges: { col: number; row: number; color: string }[][] = []
     const petals: Petal[] = []
     let nextPetalAt = 0
 
@@ -614,9 +638,9 @@ export default function PixelFlower({ className }: { className?: string }) {
       nCells = list.length
       cCol = new Int16Array(nCells); cRow = new Int16Array(nCells); cPart = new Int16Array(nCells)
       cGroup = new Int8Array(nCells); cLag = new Float32Array(nCells); cDelay = new Float32Array(nCells)
+      cLeaf = new Int8Array(nCells)
       cColor = new Array(nCells)
       ox = new Float32Array(nCells); oy = new Float32Array(nCells); vx = new Float32Array(nCells); vy = new Float32Array(nCells)
-      bloomEdges = BOUQUET.blooms.map(() => [])
       list.forEach((i, k) => {
         const c = i % cols, r = (i - c) / cols, pi = partOf[i], part = parts[pi]
         cCol[k] = c; cRow[k] = r; cPart[k] = pi
@@ -628,14 +652,11 @@ export default function PixelFlower({ className }: { className?: string }) {
           const lf = leafOf.get(pi)
           const sx = (c + 0.5 - baseX) / sceneScale, sy = (r + 0.5 - baseY) / sceneScale
           cLag[k] = lf ? clamp01(Math.hypot(sx - lf.from[0], sy - lf.from[1]) / lf.length) : 0
+          cLeaf[k] = Number(part.id.split("-")[1])
         } else {
           cLag[k] = part.kind === "stem" ? 1 - clamp01((r - stemTop[pi]) / CONFIG.sway.stemBlendRows) : 1
         }
         cDelay[k] = hash2(c, r, 13) * CONFIG.intro.cellDelay
-        if (part.kind === "bloom") {
-          const edge = at(c + 1, r) < 0 || at(c - 1, r) < 0 || at(c, r + 1) < 0 || at(c, r - 1) < 0
-          if (edge) bloomEdges[part.bloom].push({ col: c, row: r, color: cColor[k] })
-        }
         void famMax
       })
 
@@ -653,28 +674,44 @@ export default function PixelFlower({ className }: { className?: string }) {
     // ---- petals ----
     function spawnPetal(now: number) {
       if (petals.length >= CONFIG.petals.max) return
-      // only edge cells on the right-hand side of the bouquet shed petals
-      const bi = Math.floor(Math.random() * bloomEdges.length)
-      const edges = (bloomEdges[bi] ?? []).filter((e) => e.col > baseX + 1)
-      if (edges.length === 0) return
-      const e = edges[Math.floor(Math.random() * edges.length)]
-      const k = e.color === PALETTE.accent ? 8 : Math.max(0, PALETTE.pink.indexOf(e.color as (typeof PALETTE.pink)[number]))
-      const x = regionX + e.col * cell, y = e.row * cell
+      // every petal sheds from the same spot, behind the top-right bud; the
+      // petal layer is drawn beneath the baked cells so it emerges from behind
+      const src = CONFIG.petals.source
+      const b = BOUQUET.blooms[src.bloom]
+      const j = src.jitter
+      const sx = b.at[0] + src.offset[0] + rand(-j, j), sy = b.at[1] + src.offset[1] + rand(-j, j)
+      const x = regionX + (baseX + sx * sceneScale) * cell, y = (baseY + sy * sceneScale) * cell
+      const k = 7 + Math.floor(Math.random() * 2)
+      const L = CONFIG.petals.launch
+      const frame = Math.random() < 0.5 ? 0 : 1
       petals.push({
-        x, y, x0: x, vy: 0,
+        x, y, x0: x, vx: rand(L.vx[0], L.vx[1]), vy: rand(L.vy[0], L.vy[1]),
         amp: rand(CONFIG.petals.driftAmp[0], CONFIG.petals.driftAmp[1]),
         period: rand(CONFIG.petals.driftPeriod[0], CONFIG.petals.driftPeriod[1]),
-        phase: rand(0, Math.PI * 2), born: now, dead: false,
+        phase: rand(0, Math.PI * 2), born: now, dead: false, frame,
+        // the same oval at its own diagonal: 20–70° or 110–160°, never flat or upright
+        cells: ovalSprite(rad(Math.random() < 0.5 ? rand(20, 70) : rand(110, 160))),
+        seed: Math.floor(Math.random() * 1e6),
         colors: [PALETTE.pink[clampi(k + 2, 0, PMAX)], PALETTE.pink[k], PALETTE.pink[clampi(k - 2, 0, PMAX)]],
       })
     }
     function updatePetals(dt: number, now: number, wind: number) {
       for (const p of petals) {
+        const age = (now - p.born) / 1000
+        // one slow, small lean so the fall is a smooth arc with no zig-zag
+        const swing = Math.sin((age / p.period) * Math.PI * 2 + p.phase)
         p.vy = Math.min(CONFIG.petals.terminal, p.vy + CONFIG.petals.accel * dt)
         p.y += p.vy * dt
-        // wind always carries petals rightward, stronger when the sway leans right
-        p.x0 += (0.6 + 0.4 * wind) * CONFIG.petals.wind * dt
-        p.x = p.x0 + Math.sin(((now - p.born) / 1000 / p.period) * Math.PI * 2 + p.phase) * p.amp
+        // the launch push decays toward the ambient wind, which always blows
+        // rightward and strengthens when the sway leans right
+        const windV = (0.6 + 0.4 * wind) * CONFIG.petals.wind
+        p.vx += (windV - p.vx) * Math.min(1, CONFIG.petals.launch.drag * dt)
+        // breeze: smooth, non-repeating gusts unique to this petal
+        const gust = valueNoise(age * CONFIG.petals.breeze.rate, 0.5, p.seed) * CONFIG.petals.breeze.strength
+        const lift = valueNoise(0.5, age * CONFIG.petals.breeze.rate * 0.7, p.seed + 1) * CONFIG.petals.breeze.strength * 0.35
+        p.x0 += (p.vx + gust) * dt
+        p.y += lift * dt
+        p.x = p.x0 + swing * p.amp
         if (p.y > H + cell * 2) p.dead = true
       }
       for (let i = petals.length - 1; i >= 0; i--) if (petals[i].dead) petals.splice(i, 1)
@@ -685,12 +722,14 @@ export default function PixelFlower({ className }: { className?: string }) {
       for (const p of petals) {
         const frame = CONFIG.petals.tumble
           ? PETAL_FRAMES[FRAME_CYCLE[Math.floor((now - p.born) / CONFIG.petals.frameMs) % FRAME_CYCLE.length]]
-          : PETAL_FRAMES[0]
+          : p.cells
         const a = p.y > fadeStart ? clamp01(1 - (p.y - fadeStart) / (H - fadeStart)) : 1
         if (a <= 0) continue
         ctx.globalAlpha = a
         for (const [dx, dy] of frame) {
-          ctx.fillStyle = p.colors[dy]
+          // light at the upper-left, dark at the lower-right
+          const shade = (dx + dy) / 10
+          ctx.fillStyle = p.colors[shade < 0.36 ? 0 : shade < 0.66 ? 1 : 2]
           const x = Math.round((p.x + dx * cell) * dpr) / dpr, y = Math.round((p.y + dy * cell) * dpr) / dpr
           ctx.fillRect(x, y, cell + px, cell + px)
         }
@@ -728,12 +767,26 @@ export default function PixelFlower({ className }: { className?: string }) {
       const t = now / 1000
       const swayS = reduced ? 0 : Math.sin(t * CONFIG.sway.speed)
       const swayB = reduced ? 0 : Math.sin((t - CONFIG.sway.bloomLag) * CONFIG.sway.speed)
-      const swayL = reduced ? 0 : Math.sin(t * CONFIG.sway.speed * 1.3 + CONFIG.sway.leafPhase)
       const Hrows = Math.max(1, baseY - flowerTopRow)
       const introT = clamp01(elapsed / CONFIG.intro.duration)
 
       ctx.clearRect(0, 0, W, H)
       drawGrid()
+      if (!reduced) {
+        if (now >= nextPetalAt) {
+          spawnPetal(now)
+          const P = CONFIG.petals
+          if (Math.random() < P.pairChance) {
+            nextPetalAt = now + rand(P.pairGap[0], P.pairGap[1]) * 1000 // a second one right behind
+          } else {
+            // squared random skews toward short gaps with occasional long pauses
+            const u = Math.random()
+            nextPetalAt = now + lerp(P.interval[0], P.interval[1], u * u) * 1000
+          }
+        }
+        updatePetals(dt, now, swayS)
+        drawPetals(now) // beneath the bouquet so petals emerge from behind it
+      }
 
       const { radius, strength, spring, damping, maxCells } = CONFIG.repel
       const r2 = radius * radius, maxD = maxCells * cell
@@ -746,17 +799,21 @@ export default function PixelFlower({ className }: { className?: string }) {
         const hf = clamp01((baseY - row) / Hrows)
         const amp = CONFIG.sway.amplitudePx * hf * hf
         const lag = cLag[k]
-        let sway: number
+        let sway: number, lift = 0
         if (cGroup[k] === 2) {
-          // leaves ride the stem sway plus their own flutter, strongest at the tip
-          sway = swayS * amp + swayL * CONFIG.sway.leafPx * lag * lag
+          // leaves ride the stem sway and flutter up and down, strongest at the
+          // tip, each on its own slightly different rhythm
+          const li = cLeaf[k]
+          const rhythm = t * CONFIG.sway.speed * (0.85 + 0.22 * li) + CONFIG.sway.leafPhase + li * 2.1
+          sway = swayS * amp + Math.sin(rhythm * 0.5) * CONFIG.sway.leafPx * 0.35 * lag * lag
+          lift = (reduced ? 0 : Math.sin(rhythm)) * CONFIG.sway.leafPx * lag * lag
         } else {
           sway = (lag >= 1 ? swayB : lag <= 0 ? swayS : lerp(swayS, swayB, lag)) * amp
         }
 
         // cursor repel: small spring displacement, clamped to one cell
         let ax = -spring * ox[k] - damping * vx[k], ay = -spring * oy[k] - damping * vy[k]
-        const cx = regionX + col * cell + cell / 2 + sway, cy = row * cell + cell / 2
+        const cx = regionX + col * cell + cell / 2 + sway, cy = row * cell + cell / 2 + lift
         if (doRepel) {
           const ddx = cx + ox[k] - pointer.x, ddy = cy + oy[k] - pointer.y
           const d2 = ddx * ddx + ddy * ddy
@@ -788,14 +845,6 @@ export default function PixelFlower({ className }: { className?: string }) {
         }
       }
 
-      if (!reduced) {
-        if (now >= nextPetalAt) {
-          spawnPetal(now)
-          nextPetalAt = now + rand(CONFIG.petals.interval[0], CONFIG.petals.interval[1]) * 1000
-        }
-        updatePetals(dt, now, swayS)
-        drawPetals(now)
-      }
       if (debug) drawDebug()
     }
 
