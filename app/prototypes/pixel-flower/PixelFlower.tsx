@@ -9,11 +9,23 @@ import { useEffect, useRef } from "react"
 export const CONFIG = {
   cell: { desktop: 11, min: 8, refWidth: 1440 }, // px; scales with viewport width
   region: { desktopStart: 0.45, mobileBreakpoint: 768, mobileHeightFrac: 0.56, heightFrac: 0.94 },
-  grid: { size: 80, color: "#E8E4DE", width: 1 },
+  grid: { size: 80, color: "#E8E4DE", width: 1, gap: 18 }, // gap: open space around each intersection
   alphaThreshold: 128, // bake: a cell is either fully on or off
   bakeNoise: { enabled: false, scale: 6, threshold: 0.6 }, // smooth ±1 step on blooms, baked once
   intro: { enabled: false, duration: 1800, cellDelay: 120, cellPop: 180 },
-  sway: { speed: 1.15, amplitudePx: 22, bloomLag: 0.25, stemBlendRows: 4, leafPx: 9, leafPhase: 0.9 },
+  sway: { speed: 1.15, amplitudePx: 34, bloomLag: 0.25, stemBlendRows: 4, leafPx: 16, leafPhase: 0.9, bloomTiltDeg: 2,
+    // per-bloom motion scale by BOUQUET.blooms index: the top-right (0) and top-left (1) buds barely move
+    bloomMotion: [0.3, 0.25, 0.9, 1],
+    // per-bloom sway character by index: extra lag (s), phase (rad), tilt strength,
+    // and `hold` — how much a slow envelope periodically eases the bloom toward a
+    // pause. All blooms sway the same direction; the half-open tulip (2) just
+    // trails the open flower a little and pauses here and there.
+    bloomVariation: [
+      { lag: 0.05, phase: 0.05, strength: 0.8, hold: 0 },
+      { lag: 0.08, phase: -0.05, strength: 0.9, hold: 0 },
+      { lag: 0.2, phase: -0.12, strength: 1.0, hold: 0.55 },
+      { lag: 0.0, phase: 0.0, strength: 0.85, hold: 0 },
+    ] },
   petals: {
     interval: [0.35, 3.2], max: 7, terminal: 120, accel: 160,
     pairChance: 0.3, pairGap: [0.08, 0.3], // sometimes a second petal pops out right behind the first
@@ -302,7 +314,7 @@ function drawOpen(ctx: Ctx, seed: number) {
   throatLR.addColorStop(0.5, "rgba(251,227,228,0.7)")
   throatLR.addColorStop(1, "rgba(251,227,228,0)")
 
-  type P = { ang: number; sz: number; cx: number; cy: number; lit: number; seed: number; topRight: boolean; bottom: boolean }
+  type P = { ang: number; sz: number; cx: number; cy: number; lit: number; seed: number; topRight: boolean; top: boolean; bottom: boolean }
   const petals: P[] = []
   for (let i = 0; i < n; i++) {
     let ang = (i / n) * 360 + 90 + (hash2(seed, i, 1) - 0.5) * 28 // ±14° rotation
@@ -314,7 +326,7 @@ function drawOpen(ctx: Ctx, seed: number) {
       dir = [Math.cos(rad(ang)), -Math.sin(rad(ang))]
     }
     const sz = 1 + (hash2(seed, i, 2) - 0.5) * 0.4 // ±20% size
-    petals.push({ ang, sz, cx: dir[0], cy: dir[1], lit: -dir[0] * 0.707 - dir[1] * 0.707, seed: seed * 7 + i, topRight: dir[0] > 0.2 && dir[1] < -0.2, bottom: dir[1] > 0.3 })
+    petals.push({ ang, sz, cx: dir[0], cy: dir[1], lit: -dir[0] * 0.707 - dir[1] * 0.707, seed: seed * 7 + i, topRight: dir[0] > 0.2 && dir[1] < -0.2, top: dir[1] < -0.85, bottom: dir[1] > 0.3 })
   }
   const byAngle = petals.slice()
   petals.sort((a, b) => a.cy - b.cy) // back (upper) petals first, front (lower) last
@@ -340,12 +352,16 @@ function drawOpen(ctx: Ctx, seed: number) {
       // petals facing the light stay coral to the tip; those facing away go deep rose
       // top-left petals deeper, bottom-right lighter; the top-right petal is
       // kept in the lightest shades with no dark cells at all
-      const shift = p.topRight ? 2 : Math.round(-p.lit * 3.5)
+      // the top petal stays in the mid-light tones rather than the deep shadow
+      const shift = p.topRight ? 2 : p.top ? 1 : Math.round(-p.lit * 3.5)
       const g = ctx.createLinearGradient(0, 0, 0, -len)
+      // the right-hand petals' tips stop short of the deepest tones so their
+      // rim doesn't carry a run of dark cells
+      const rightSide = p.cx > 0.2 && p.cy < 0.35
       g.addColorStop(0, B[clampi(11 + shift, 0, 13)])
       g.addColorStop(0.35, B[clampi(9 + shift, 0, 13)])
-      g.addColorStop(0.7, B[clampi(6 + shift, 0, 13)])
-      g.addColorStop(1, B[clampi(3 + shift, 0, 13)])
+      g.addColorStop(0.7, B[clampi((rightSide ? 7 : 6) + shift, 0, 13)])
+      g.addColorStop(1, B[clampi((rightSide ? 5 : 3) + shift, 0, 13)])
       ctx.fillStyle = g
       ctx.fillRect(-w, -len * 1.2, w * 2, len * 1.4)
       // bloom-space layers: undo the petal transform for them
@@ -388,7 +404,7 @@ function drawOpen(ctx: Ctx, seed: number) {
       ctx.fillRect(-R * 1.6, -R * 1.6, R * 3.2, R * 3.2)
       ctx.fillStyle = throatLR
       ctx.fillRect(-R * 1.6, -R * 1.6, R * 3.2, R * 3.2)
-      if (!front && !p.topRight) { // back petals one step deeper
+      if (!front && !p.topRight && !p.top) { // back petals one step deeper
         ctx.fillStyle = "rgba(158,47,58,0.1)"
         ctx.fillRect(-R * 1.6, -R * 1.6, R * 3.2, R * 3.2)
       }
@@ -468,6 +484,20 @@ function drawOpen(ctx: Ctx, seed: number) {
       ctx.restore()
     })
   }
+  // notch the rim where the top-left and bottom-left petals meet: clear a
+  // couple of cells at the outer edge along their seam so the silhouette
+  // shows them as two petals
+  {
+    const a = byAngle[1].ang, b = byAngle[2].ang
+    const mid = rad((a + b) / 2)
+    const dx = Math.cos(mid), dy = -Math.sin(mid)
+    ctx.save()
+    ctx.globalCompositeOperation = "destination-out"
+    // a horizontal slot two cells deep and one cell tall, cut inward from the rim
+    ctx.translate(dx * R * 0.92, dy * R * 0.92)
+    ctx.fillRect(-1.3, -0.5, 2.8, 1.0)
+    ctx.restore()
+  }
   // rim shadow falling into the pit: a couple of deep-rose cells hugging the
   // centre's upper-left, plus a deeper wash on the bottom-left lobe
   ctx.strokeStyle = "rgba(126,31,43,0.75)"
@@ -528,6 +558,12 @@ function drawCenter(ctx: Ctx) {
   ctx.fill()
   ctx.fillStyle = c[7]
   ctx.fillRect(EYE[0] + 0.5, EYE[1] + 0.4, 0.8, 0.8)
+  // a couple of light cells inside the eye: a pale pink catch on the
+  // upper-left and a lighter warm brown beside it
+  ctx.fillStyle = c[8]
+  ctx.fillRect(EYE[0] - 1.0, EYE[1] - 0.9, 0.8, 0.8)
+  ctx.fillStyle = c[6]
+  ctx.fillRect(EYE[0] - 0.1, EYE[1] - 1.2, 0.8, 0.7)
 }
 
 // half-open bloom: cup with the two outer petals curling outward
@@ -724,6 +760,8 @@ export default function PixelFlower({ className }: { className?: string }) {
     let cColor: string[] = []
     let cGroup = new Int8Array(0) // 0 stem, 1 bloom/center, 2 leaf
     let cLeaf = new Int8Array(0) // leaf index for group 2 (each leaf gets its own flutter timing)
+    let cBloom = new Int8Array(0) // bloom index for group 1, so heads can tilt about their stem
+    let bloomPivot: [number, number][] = [] // per bloom: attach point in cell coords
     let cLag = new Float32Array(0) // 0 = stem phase, 1 = bloom phase
     let cDelay = new Float32Array(0)
     let ox = new Float32Array(0), oy = new Float32Array(0), vx = new Float32Array(0), vy = new Float32Array(0)
@@ -917,6 +955,8 @@ export default function PixelFlower({ className }: { className?: string }) {
       cCol = new Int16Array(nCells); cRow = new Int16Array(nCells); cPart = new Int16Array(nCells)
       cGroup = new Int8Array(nCells); cLag = new Float32Array(nCells); cDelay = new Float32Array(nCells)
       cLeaf = new Int8Array(nCells)
+      cBloom = new Int8Array(nCells).fill(-1)
+      bloomPivot = BOUQUET.blooms.map((b) => [baseX + b.at[0] * sceneScale, baseY + (b.at[1] + b.stemFrom) * sceneScale])
       cColor = new Array(nCells)
       ox = new Float32Array(nCells); oy = new Float32Array(nCells); vx = new Float32Array(nCells); vy = new Float32Array(nCells)
       list.forEach((i, k) => {
@@ -927,6 +967,9 @@ export default function PixelFlower({ className }: { className?: string }) {
           : fam === "bloom" ? PALETTE.bloom[idx[i]]
           : fam === "green" ? PALETTE.green[idx[i]] : PALETTE.center[idx[i]]
         cGroup[k] = part.kind === "stem" ? 0 : part.kind === "leaf" ? 2 : 1
+        if (part.kind === "bloom" || part.kind === "center") cBloom[k] = part.bloom
+        // stems are made one per bloom (`stem-<i>`), so their top rows can follow that bloom
+        if (part.kind === "stem") cBloom[k] = Number(part.id.split("-")[1])
         if (part.kind === "leaf") {
           // how far along the blade this cell sits, so the tip sways most
           const lf = leafOf.get(pi)
@@ -1018,13 +1061,25 @@ export default function PixelFlower({ className }: { className?: string }) {
     }
 
     function drawGrid() {
+      // an open grid: each line is dashed so it stops short of every
+      // intersection, leaving the corners of the cells unclosed
       ctx.strokeStyle = CONFIG.grid.color
       ctx.lineWidth = CONFIG.grid.width
+      const g = CONFIG.grid.size, gap = CONFIG.grid.gap
+      ctx.setLineDash([g - gap, gap])
+      ctx.lineDashOffset = -gap / 2
       ctx.beginPath()
-      const g = CONFIG.grid.size
       for (let x = regionX + 0.5; x <= W; x += g) { ctx.moveTo(x, 0); ctx.lineTo(x, H) }
-      for (let y = 0.5; y <= H; y += g) { ctx.moveTo(regionX, y); ctx.lineTo(W, y) }
       ctx.stroke()
+      // horizontal lines reach one extra dash to the left of the flower region;
+      // their dash phase is set so the gaps sit on the vertical lines' intersections
+      ctx.beginPath()
+      ctx.lineDashOffset = -(regionX + gap / 2)
+      const x0 = Math.max(0, regionX - g)
+      for (let y = 0.5; y <= H; y += g) { ctx.moveTo(x0, y); ctx.lineTo(W, y) }
+      ctx.stroke()
+      ctx.setLineDash([])
+      ctx.lineDashOffset = 0
     }
 
     function drawDebug() {
@@ -1049,6 +1104,27 @@ export default function PixelFlower({ className }: { className?: string }) {
       const swayS = reduced ? 0 : Math.sin(t * CONFIG.sway.speed)
       const swayB = reduced ? 0 : Math.sin((t - CONFIG.sway.bloomLag) * CONFIG.sway.speed)
       const Hrows = Math.max(1, baseY - flowerTopRow)
+      // each bloom rides the sway on its own lag and phase, with its own tilt
+      // strength and a slower secondary wobble, so the heads don't move in unison
+      const nB = BOUQUET.blooms.length
+      const bSway = new Float32Array(nB), bCos = new Float32Array(nB), bSin = new Float32Array(nB)
+      for (let b = 0; b < nB; b++) {
+        const v = CONFIG.sway.bloomVariation[b] ?? { lag: 0, phase: 0, strength: 1, hold: 0 }
+        const lag = CONFIG.sway.bloomLag + v.lag
+        const phase = v.phase
+        const strength = v.strength
+        // slow envelope: when it peaks the bloom eases toward a pause, then picks
+        // the sway back up — a hesitation rather than a different rhythm
+        const env = 1 - v.hold * (0.5 + 0.5 * Math.sin(t * 0.21 + b * 2.3))
+        const main = reduced ? 0 : Math.sin((t - lag) * CONFIG.sway.speed + phase) * env
+        const wobble = reduced ? 0 : Math.sin(t * CONFIG.sway.speed * 0.37 + b * 1.9) * 0.35
+        const motion = CONFIG.sway.bloomMotion[b] ?? 1
+        bSway[b] = main * motion
+        let tilt = (main * strength + wobble) * motion * rad(CONFIG.sway.bloomTiltDeg)
+        // blooms on the left only lean left from their rest tilt, never past it to the right
+        if (BOUQUET.blooms[b].at[0] < 0) tilt = Math.min(0, tilt)
+        bCos[b] = Math.cos(tilt); bSin[b] = Math.sin(tilt)
+      }
       const introT = clamp01(elapsed / CONFIG.intro.duration)
 
       ctx.clearRect(0, 0, W, H)
@@ -1086,15 +1162,24 @@ export default function PixelFlower({ className }: { className?: string }) {
           // tip, each on its own slightly different rhythm
           const li = cLeaf[k]
           const rhythm = t * CONFIG.sway.speed * (0.85 + 0.22 * li) + CONFIG.sway.leafPhase + li * 2.1
-          sway = swayS * amp + Math.sin(rhythm * 0.5) * CONFIG.sway.leafPx * 0.35 * lag * lag
+          sway = swayS * amp + Math.sin(rhythm * 0.5) * CONFIG.sway.leafPx * 0.5 * lag * lag
           lift = (reduced ? 0 : Math.sin(rhythm)) * CONFIG.sway.leafPx * lag * lag
         } else {
-          sway = (lag >= 1 ? swayB : lag <= 0 ? swayS : lerp(swayS, swayB, lag)) * amp
+          const bloomPhase = cBloom[k] >= 0 ? bSway[cBloom[k]] : swayB
+          sway = (lag >= 1 ? bloomPhase : lag <= 0 ? swayS : lerp(swayS, bloomPhase, lag)) * amp
         }
 
         // cursor repel: small spring displacement, clamped to one cell
         let ax = -spring * ox[k] - damping * vx[k], ay = -spring * oy[k] - damping * vy[k]
-        const cx = regionX + col * cell + cell / 2 + sway, cy = row * cell + cell / 2 + lift
+        let cx = regionX + col * cell + cell / 2 + sway, cy = row * cell + cell / 2 + lift
+        if (cGroup[k] === 1 && cBloom[k] >= 0) {
+          // heads tilt about their stem attach point in step with the sway
+          const bi = cBloom[k]
+          const [px, py] = bloomPivot[bi]
+          const dx = col + 0.5 - px, dy = row + 0.5 - py
+          cx = regionX + (px + dx * bCos[bi] - dy * bSin[bi]) * cell + sway
+          cy = (py + dx * bSin[bi] + dy * bCos[bi]) * cell + lift
+        }
         if (doRepel) {
           const ddx = cx + ox[k] - pointer.x, ddy = cy + oy[k] - pointer.y
           const d2 = ddx * ddx + ddy * ddy

@@ -20,7 +20,8 @@ shows soft lobes rather than a smooth circle (the outline is waved along its out
 smoothed once so nothing reads as a spike; seeded ±20% size and ±14° rotation; bases overlapping past
 the centre so it cups) quantised to its own 14-tone `PALETTE.bloom` ramp, deeper and
 more saturated than the bud pinks and running up to a near-white blush. Each petal has its own
-gradient from pale at the centre to saturated rose at the tip, shifted deeper on the top-left petals and lighter on the bottom-right ones, a soft lit ridge along its upper-left curve and a shadow along its
+gradient from pale at the centre to saturated rose at the tip (the right-hand petals stop a couple
+of steps short of the deepest tones so their rim carries no dark run), shifted deeper on the top-left petals and lighter on the bottom-right ones, a soft lit ridge along its upper-left curve and a shadow along its
 lower-right edge. Over that, in bloom space, a whole-flower falloff pulls the top-left into deep rose and lifts the
 bottom-right toward blush (the shadow sits top-left, the light bottom-right), and a full throat ring (1–2 cells, visible all round, peaking at
 near-white on its lower-right) hugs the centre. The shadowed top-left petals carry two short pale ridge strokes each and the two or three most
@@ -28,7 +29,7 @@ lit ones a small near-white specular spot, and in cell space a low-frequency mot
 clusters inside the darker tones by one or two steps and drops small clusters inside the palest tones
 by one or two, so no patch sits as one flat colour, so the dark areas read as light catching on
 the surface rather than one smooth ramp. A short deep-rose touch sits on the centre's left, near-white arcs sit on its upper-left and
-lower-left (the lit lip of the pit), a darker band wraps its right side, the top-right petal is held in the
+lower-left (the lit lip of the pit), a darker band wraps its right side, the top petal is kept in the mid-light tones and the top-right petal is held in the
 lightest shades (a blush wash and a fixed ramp lift, no dark cells) with a brighter, wider lip on its
 outer rim, a deeper wash sits on the bottom-left lobe, another deepens the inner fold on the right side between
 the centre and the right petals, a few small softer mid-pink dabs and two deep-rose streaks running horizontally inward from the
@@ -36,7 +37,8 @@ edge sit inside the dark top-left patch so it isn't one flat tone, and in cell s
 draw last. Petal separations are four straight spokes from the centre, one step darker, fading out
 halfway to the edge. The bottom petals have rounded tips; the bottom-left one is swung toward horizontal and given
 extra reach so it extends out past the top-left petal's edge, and the bottom-right one is short and
-broad; the top (near) petals carry a thin lighter line just
+broad; a horizontal slot two cells deep is cut inward from the rim where the top-left and bottom-left
+petals meet so the outline shows them as two petals; the top (near) petals carry a thin lighter line just
 inside their outer edge (the curled lip catching light).
 The centre sits a little down and to the right of the bloom's origin and is a near-circular pit: `#5C2A22` with `#3A1512` on its
 upper-left cell or two and a muted `#B8434F` glint lower-right. In cell space the open flower's quantised
@@ -77,10 +79,21 @@ the bouquet just spans more of them).
 The result is packed into struct-of-arrays (`cCol`, `cRow`, `cColor`, `cGroup`, `cLag`). A full-resolution render of the same
 parts goes to a second canvas for the debug view.
 
+**Grid.** The background grid is drawn dashed so each line stops short of every intersection
+(`grid.gap`), leaving the cell corners open rather than closed boxes. Vertical lines cover the
+flower region; horizontal lines reach one extra dash to the left of it.
+
 **Animate.** Every frame draws only the baked cells. Sway is a per-*row* horizontal offset:
-`sin(t·speed) · amplitudePx · (heightFromBottom/totalHeight)²` (22px at the top by default), so the base row is fixed and the top leans
-most. Bloom cells use the phase `t − 0.25s`; stem cells blend from the bloom phase at their top row
-to the stem phase four rows down (`cLag`), so the joint never tears. Leaf cells store how far along the blade
+`sin(t·speed) · amplitudePx · (heightFromBottom/totalHeight)²` (34px at the top by default), so the base row is fixed and the top leans
+most. Each bloom's cells use their own lagged, phase-shifted copy of the sway (`sway.bloomVariation`
+sets each bloom's extra lag, phase, tilt strength and `hold` by index; every bloom sways the same
+direction, the half-open tulip just trails the open flower by ~0.2s and a slow envelope eases it
+toward a pause now and then) and rotate about the bloom's stem attach point by up to
+`sway.bloomTiltDeg` scaled by a per-bloom strength, with a slower secondary wobble, so the heads lean
+into the sway on slightly different rhythms rather than in unison; `sway.bloomMotion` scales each
+bloom's lateral sway and tilt by index, the two buds are held to about a quarter to a third, and the left-side blooms' tilt is clamped so they only
+lean left from their rest position, never past it to the right; stem cells blend from their own bloom's phase at their top row
+to the stem phase four rows down (`cLag`), so the joint never tears even when that bloom is damped. Leaf cells store how far along the blade
 they sit and which leaf they belong to, and flutter *up and down* (`sway.leafPx`, squared toward the
 tip) with a smaller sideways component, each leaf on its own rhythm and phase, so the two low leaves
 visibly bob out of step even though the row-based sway is near zero at the bottom. Every x/y is rounded to device pixels and each cell is drawn one device pixel wider, which removes hairline
