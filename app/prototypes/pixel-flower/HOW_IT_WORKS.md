@@ -25,14 +25,20 @@ lower-right edge. Over that, in bloom space, a whole-flower falloff pulls the to
 bottom-right toward blush (the shadow sits top-left, the light bottom-right), and a full throat ring (1–2 cells, visible all round, peaking at
 near-white on its lower-right) hugs the centre. The shadowed top-left petals carry two short pale ridge strokes each and the two or three most
 lit ones a small near-white specular spot, and in cell space a low-frequency mottle lifts small
-clusters inside the darker tones by one or two steps, so the dark areas read as light catching on
-the surface rather than one smooth ramp. A short deep-rose arc hugs the centre's upper-left (the rim's
-shadow falling into the pit), a deeper wash sits on the bottom-left lobe, another deepens the inner fold on the right side between
+clusters inside the darker tones by one or two steps and drops small clusters inside the palest tones
+by one or two, so no patch sits as one flat colour, so the dark areas read as light catching on
+the surface rather than one smooth ramp. A short deep-rose touch sits on the centre's left, near-white arcs sit on its upper-left and
+lower-left (the lit lip of the pit), a darker band wraps its right side, the top-right petal is held in the
+lightest shades (a blush wash and a fixed ramp lift, no dark cells) with a brighter, wider lip on its
+outer rim, a deeper wash sits on the bottom-left lobe, another deepens the inner fold on the right side between
 the centre and the right petals, a few small softer mid-pink dabs and two deep-rose streaks running horizontally inward from the
 edge sit inside the dark top-left patch so it isn't one flat tone, and in cell space the bottom-left outer edge darkens two steps. Back (upper) petals draw first one step deeper; front (lower) petals
 draw last. Petal separations are four straight spokes from the centre, one step darker, fading out
-halfway to the edge. The centre sits a little down and to the right of the bloom's origin and is a small soft pit
-(~3×3 cells): `#5C2A22` with `#3A1512` on its
+halfway to the edge. The bottom petals have rounded tips; the bottom-left one is swung toward horizontal and given
+extra reach so it extends out past the top-left petal's edge, and the bottom-right one is short and
+broad; the top (near) petals carry a thin lighter line just
+inside their outer edge (the curled lip catching light).
+The centre sits a little down and to the right of the bloom's origin and is a near-circular pit: `#5C2A22` with `#3A1512` on its
 upper-left cell or two and a muted `#B8434F` glint lower-right. In cell space the open flower's quantised
 indices get a 3×3 median over its own cells (removing single-cell speckle from the overlapping
 gradients while keeping the colour bands), and it darkens one step only along its bottom-right outer
