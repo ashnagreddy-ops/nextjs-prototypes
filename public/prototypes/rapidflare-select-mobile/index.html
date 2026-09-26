@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Rapidflare Select — Mobile</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap">
+<style>
+/* same named palette as the desktop rapidflare-select rig — fixed light
+   surface by brief, no dark mode */
+:root{
+  --ink:#14151E;
+  --ink-2:#363B47;
+  --graphite:#5B6270;
+  --faint:#8991A0;
+  --hairline-2:#EBEDF1;
+  --ground:#F5F6F8;
+  --navy:#181A29;
+  --no:#B23B2E;
+
+  --background:#fbfbfd;
+  --card:#ffffff;
+  --muted:#f4f4f7;
+  --border:#e4e4ea;
+  --foreground:#191a23;
+  --muted-foreground:#6b6d7a;
+
+  --primary:#5b5fef;
+  --primary-subtle:#eef0fd;
+  --primary-foreground:#ffffff;
+
+  --radius-sm:6px;
+  --radius-md:10px;
+  --radius-lg:14px;
+  --r:6px;
+
+  --shadow-sm:0 1px 2px rgba(15,15,20,.04),0 1px 1px rgba(15,15,20,.03);
+  --shadow-md:0 4px 16px rgba(15,15,20,.08),0 2px 6px rgba(15,15,20,.04);
+  --ease-out:cubic-bezier(0.16,1,0.3,1);
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--background);color:var(--foreground);font-family:"Inter",ui-sans-serif,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit;background:none;border:none;cursor:pointer;padding:0}
+:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
+svg{display:block;flex:none}
+
+/* ---------- device ---------- */
+/* full-bleed on a real phone; on a wider window, shown inside a 390×844
+   device frame so the layout reads at true phone size */
+#stage{height:100%;display:flex;align-items:center;justify-content:center}
+#phone{position:relative;width:100%;height:100%;background:var(--card);display:flex;flex-direction:column;overflow:hidden}
+@media (min-width:520px){
+  #stage{padding:24px}
+  #phone{width:390px;height:min(844px,calc(100dvh - 48px));border-radius:36px;border:1px solid var(--border);box-shadow:0 1px 2px rgba(21,24,50,.06),0 24px 60px -24px rgba(21,24,50,.32)}
+}
+
+/* ---------- top bar ---------- */
+.topbar{flex:none;height:52px;display:flex;align-items:center;gap:4px;padding:0 8px;border-bottom:1px solid var(--border)}
+.iconbtn{width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;color:var(--ink-2)}
+.iconbtn:hover{background:var(--muted)}
+.title{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;line-height:1.2}
+.title .name{display:inline-flex;align-items:center;gap:3px;font-size:13.5px;font-weight:600;color:var(--primary)}
+.title .name svg{color:var(--faint)}
+
+/* ---------- filter strip (replaces the desktop right-hand panel) ---------- */
+.fstrip{flex:none;display:flex;align-items:center;gap:6px;padding:8px 16px;border-bottom:1px solid var(--border);overflow-x:auto;scrollbar-width:none}
+.fstrip::-webkit-scrollbar{display:none}
+.fbtn{flex:none;display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 10px;border:1px solid var(--border);border-radius:999px;font-size:12px;font-weight:600;color:var(--foreground);background:var(--card)}
+.fbtn .count{min-width:17px;height:17px;border-radius:999px;background:var(--primary);color:var(--primary-foreground);font-size:10px;display:inline-flex;align-items:center;justify-content:center;padding:0 5px;font-variant-numeric:tabular-nums}
+.chip{flex:none;display:inline-flex;align-items:center;gap:5px;height:30px;padding:0 10px;border-radius:999px;background:var(--muted);font-size:12px;color:var(--ink-2);white-space:nowrap}
+.chip .k{color:var(--faint)}
+.chip.assumed{background:var(--primary-subtle);color:var(--foreground)}
+.chip.assumed svg{color:var(--primary)}
+
+/* ---------- transcript ---------- */
+.scroll{flex:1;min-height:0;overflow-y:auto;padding:18px 16px 8px;scrollbar-width:none}
+.scroll::-webkit-scrollbar{display:none}
+.turn.user{display:flex;justify-content:flex-end;margin-bottom:18px}
+.ubub{background:var(--ground);border:1px solid var(--hairline-2);border-radius:var(--r);padding:9px 12px;font-size:14px;line-height:1.5;max-width:85%}
+.aline{font-size:14px;line-height:1.6;color:var(--ink);margin:0 0 12px}
+.aline b{font-weight:600}
+
+.rtog{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--muted-foreground);font-weight:500;margin-bottom:10px;min-height:32px}
+.rtog .car{transition:transform .28s var(--ease-out)}
+.rtog.closed .car{transform:rotate(-90deg)}
+.rbody{display:none;margin:0 0 14px;padding-left:12px;border-left:2px solid var(--border)}
+.rbody.open{display:block}
+.rbody p{margin:0 0 9px;font-size:13px;line-height:1.6;color:var(--ink-2)}
+.rbody p:last-child{margin-bottom:0}
+.rbody b{font-weight:600;color:var(--foreground)}
+
+.ctag{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:500;color:var(--muted-foreground);background:var(--muted);border:1px solid var(--border);border-radius:var(--radius-sm);padding:2px 7px 2px 2px;white-space:nowrap;vertical-align:1px}
+.ctag .cidx{display:inline-flex;align-items:center;justify-content:center;min-width:15px;height:15px;font-size:9.5px;font-weight:700;border-radius:3px;background:var(--card);color:var(--foreground)}
+
+.mrow{display:flex;align-items:center;gap:8px;margin-top:4px;margin-bottom:8px}
+.macts{display:flex;align-items:center;margin-left:-6px}
+.macts button{width:32px;height:32px;border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;color:var(--faint)}
+.macts button:hover{background:var(--muted);color:var(--ink-2)}
+.mts{margin-left:auto;font-size:10.5px;color:var(--faint);white-space:nowrap;font-variant-numeric:tabular-nums}
+
+/* ---------- docked bottom: actions, input, brand ---------- */
+.dock{flex:none;background:var(--card);padding-bottom:env(safe-area-inset-bottom)}
+.actbar{display:flex;gap:8px;padding:8px 16px 6px;overflow-x:auto;scrollbar-width:none}
+.actbar::-webkit-scrollbar{display:none}
+.actbtn{flex:none;display:inline-flex;align-items:center;gap:6px;height:34px;border:1px solid var(--border);border-radius:999px;padding:0 12px;font-size:12.5px;color:var(--ink-2);background:var(--card);white-space:nowrap}
+.actbtn svg{color:var(--muted-foreground)}
+.inbar{padding:4px 16px 6px}
+.infield{display:flex;align-items:center;gap:10px;border:1px solid var(--border);border-radius:var(--radius-lg);padding:8px 8px 8px 14px;background:var(--card)}
+.intext{flex:1;min-width:0;font-size:14px;color:var(--faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.infield .tool{color:var(--faint)}
+.send{width:32px;height:32px;border-radius:50%;background:var(--primary-subtle);color:var(--primary);display:flex;align-items:center;justify-content:center;flex:none}
+.brandbar{display:flex;align-items:center;justify-content:center;gap:8px;padding:4px 16px 8px;font-size:10px;color:var(--faint)}
+.brandbar b{color:var(--ink-2);font-weight:600}
+
+/* ---------- filters bottom sheet ---------- */
+.scrim{position:absolute;inset:0;background:rgba(20,21,30,.32);opacity:0;pointer-events:none;transition:opacity .25s var(--ease-out);z-index:10}
+.sheet{position:absolute;left:0;right:0;bottom:0;max-height:78%;background:var(--card);border-radius:18px 18px 0 0;box-shadow:var(--shadow-md);transform:translateY(100%);transition:transform .32s var(--ease-out);z-index:11;display:flex;flex-direction:column;padding-bottom:env(safe-area-inset-bottom)}
+#phone.sheet-open .scrim{opacity:1;pointer-events:auto}
+#phone.sheet-open .sheet{transform:none}
+.grab{width:36px;height:4px;border-radius:2px;background:var(--border);margin:8px auto 4px}
+.sheet-head{display:flex;align-items:center;gap:8px;padding:6px 8px 10px 16px;border-bottom:1px solid var(--border)}
+.sheet-head h2{margin:0;flex:1;font-size:14px;font-weight:600}
+.sheet-body{overflow-y:auto;padding:6px 16px 16px}
+.frow{padding:12px 0;border-bottom:1px solid var(--border)}
+.frow:last-child{border-bottom:none}
+.frow-top{display:flex;align-items:center;gap:7px;margin-bottom:8px}
+.flabel{font-size:13px;font-weight:600}
+.fassume{color:var(--primary);display:inline-flex}
+.frow-right{margin-left:auto;display:flex;align-items:center;gap:6px}
+.fval{font-size:12.5px;font-weight:600;font-variant-numeric:tabular-nums}
+.fx{width:28px;height:28px;display:flex;align-items:center;justify-content:center;color:var(--faint);border-radius:6px}
+.fselwrap{position:relative;display:block}
+.fsel{appearance:none;-webkit-appearance:none;width:100%;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--card);padding:10px 32px 10px 12px;font:inherit;font-size:14px;color:var(--foreground)}
+.fselwrap .fcar{position:absolute;right:10px;top:50%;transform:translateY(-50%);color:var(--faint);pointer-events:none}
+.frange{-webkit-appearance:none;appearance:none;width:100%;height:4px;border-radius:2px;background:linear-gradient(to right,var(--primary) var(--p),var(--border) var(--p));outline:none;margin:10px 0 6px}
+.frange::-webkit-slider-thumb{-webkit-appearance:none;width:22px;height:22px;border-radius:50%;background:var(--card);border:2px solid var(--primary);box-shadow:var(--shadow-sm)}
+.frange::-moz-range-thumb{width:22px;height:22px;border-radius:50%;background:var(--card);border:2px solid var(--primary);box-shadow:var(--shadow-sm)}
+.freason{margin:8px 0 0;font-size:12px;line-height:1.5;color:var(--graphite)}
+.freason b{color:var(--ink-2);font-weight:600}
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="phone">
+
+    <header class="topbar">
+      <button class="iconbtn" title="Menu"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+      <button class="title">
+        <span class="name">Rapid Selection Agent<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></span>
+      </button>
+      <button class="iconbtn" title="New conversation"><svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.4 2.6a2 2 0 1 1 2.8 2.8L12 14l-4 1 1-4Z"/></svg></button>
+    </header>
+
+    <div class="fstrip">
+      <button class="fbtn" id="openFilters">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 5h16M7 12h10M10 19h4"/></svg>
+        Filters <span class="count">2</span>
+      </button>
+      <span class="chip"><span class="k">Pattern</span> Omnidirectional, low-null</span>
+      <span class="chip assumed"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.5 6.5l2 2M15.5 15.5l2 2M6.5 17.5l2-2M15.5 8.5l2-2"/></svg><span class="k">Impedance</span> 50 Ω</span>
+    </div>
+
+    <main class="scroll">
+      <div class="turn user"><div class="ubub">I need an omnidirectional antenna for a drone, with as few nulls as possible.</div></div>
+
+      <div class="agent">
+        <button class="rtog closed" id="rtog">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><g transform="translate(4 4) scale(1.15)"><path d="M8 1.6a4 4 0 0 0-2.2 7.3c.4.3.7.8.7 1.3v.4h3v-.4c0-.5.3-1 .7-1.3A4 4 0 0 0 8 1.6Z"/><path d="M6.3 12.6h3.4M6.8 14.1h2.4"/></g></svg>
+          <span class="rlabel">Show reasoning</span>
+          <svg class="car" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+        </button>
+        <div class="rbody" id="rbody">
+          <p>This reads like a use-case question — the buyer is describing a deployment (a drone airframe) rather than naming a part or a spec.</p>
+          <p>Three explicit constraints: omnidirectional coverage, minimal nulls, drone mounting. <b>Dipole and monopole-style</b> elements satisfy the first two best, since they hold a fuller 360° pattern with fewer dead zones than directional designs.</p>
+          <p>Translating those into catalog filters: fix radiation pattern to omnidirectional, low-null, and set impedance to <b>50&nbsp;Ω</b> as a starting point — near-universal across RF and wireless.</p>
+          <p>Running those filters across 24 antennas returns 20 candidates. Still too broad — <b>bands</b> and <b>connector type</b> are the next two most selective parameters, and I have neither.</p>
+        </div>
+
+        <p class="aline">For an omnidirectional antenna with minimal nulls, the best-performing designs are typically <b>dipole or monopole-style</b>, since they maintain a fuller 360° radiation pattern with fewer dead zones than directional antennas.</p>
+        <p class="aline">I’m also assuming standard <b>50-ohm impedance</b> for this recommendation, since that’s the near-universal standard across RF and wireless systems — this rules out a small number of non-standard components. <span class="ctag"><span class="cidx">1</span>RF design note · Impedance</span></p>
+        <p class="aline">Based on these considerations, the candidate pool narrows from 24 to 20 — still too broad a range for me to recommend specific models with confidence. The remaining spread depends heavily on your frequency bands and connector type, both of which significantly affect which antennas are viable for your setup.</p>
+        <p class="aline">Could you let me know what frequency bands this needs to support, and what connector type your board uses?</p>
+
+        <div class="mrow">
+          <div class="macts">
+            <button title="Helpful"><svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M2.2 8h2v5.6h-2z"/><path d="M4.2 8l3-5.3c.3-.5 1-.5 1.3.1l.2.5c.3.7.1 1.5-.4 2.1L7.6 7h4.3A1.3 1.3 0 0 1 13.2 8.5l-.8 4a1.3 1.3 0 0 1-1.28 1.1H4.2"/></svg></button>
+            <button title="Not helpful"><svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M2.2 3h2v5.6h-2z"/><path d="M4.2 8.6l3 5.3c.3.5 1 .5 1.3-.1l.2-.5c.3-.7.1-1.5-.4-2.1L7.6 10h4.3a1.3 1.3 0 0 0 1.28-1.5l-.8-4A1.3 1.3 0 0 0 11.12 3.4H4.2"/></svg></button>
+            <button title="Read aloud"><svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M2.3 6.2h2.2L7.8 3.4v9.4L4.5 10.2H2.3z"/><path d="M10.3 6.2a3 3 0 0 1 0 4"/><path d="M12.1 4.5a5.6 5.6 0 0 1 0 7.4"/></svg></button>
+            <button title="Copy"><svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><rect x="6.1" y="6.1" width="7.4" height="7.4" rx="1.3"/><path d="M3.6 10V3.8a1.2 1.2 0 0 1 1.2-1.2h6.3"/></svg></button>
+          </div>
+          <div class="mts">Sep 09, 9:21 AM</div>
+        </div>
+      </div>
+    </main>
+
+    <div class="dock">
+      <div class="actbar">
+        <button class="actbtn"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>Submit an enquiry</button>
+        <button class="actbtn"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6M9 13h6M9 17h6M9 9h1"/></svg>Request quote</button>
+        <button class="actbtn"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19a5.5 5.5 0 0 1 11 0"/><path d="M16 8.7a3 3 0 1 1 3.6 2.9M19 14a5 5 0 0 1 3.3 4.6"/></svg>Talk to team</button>
+      </div>
+      <div class="inbar">
+        <div class="infield">
+          <span class="tool"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.5 12.5 12 21a5 5 0 0 1-7-7l8.5-8.5a3.5 3.5 0 0 1 5 5L10 19a2 2 0 1 1-3-3l7-7"/></svg></span>
+          <span class="intext">Ask a follow-up question…</span>
+          <span class="tool"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M6 11a6 6 0 0 0 12 0M12 17v4M9 21h6"/></svg></span>
+          <span class="send"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M6 11l6-6 6 6"/></svg></span>
+        </div>
+      </div>
+      <div class="brandbar"><span>Powered by <b>Rapidflare</b></span></div>
+    </div>
+
+    <!-- filters sheet: the desktop right-hand panel, moved behind the strip -->
+    <div class="scrim" id="scrim"></div>
+    <section class="sheet" aria-label="Filters">
+      <div class="grab"></div>
+      <div class="sheet-head">
+        <h2>Filters</h2>
+        <button class="iconbtn" id="closeFilters" title="Close"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+      </div>
+      <div class="sheet-body">
+        <div class="frow">
+          <div class="frow-top">
+            <span class="flabel">Radiation pattern</span>
+            <span class="frow-right"><button class="fx" title="Remove filter"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button></span>
+          </div>
+          <label class="fselwrap">
+            <select class="fsel"><option selected>Omnidirectional, low-null</option><option>Omnidirectional</option><option>Directional</option><option>Any</option></select>
+            <span class="fcar"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></span>
+          </label>
+          <p class="freason"><b>Reason:</b> You asked for omnidirectional coverage with minimal dead zones.</p>
+        </div>
+        <div class="frow">
+          <div class="frow-top">
+            <span class="flabel">Impedance</span>
+            <span class="fassume" title="Assumed — inferred, not stated"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6.5 6.5l2 2M15.5 15.5l2 2M6.5 17.5l2-2M15.5 8.5l2-2"/></svg></span>
+            <span class="frow-right"><span class="fval">50 Ω</span><button class="fx" title="Remove filter"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button></span>
+          </div>
+          <input type="range" class="frange" min="40" max="100" step="5" value="50" style="--p:16.67%" aria-label="Impedance">
+          <p class="freason"><b>Reason:</b> Standard across RF and wireless systems — rules out non-standard components.</p>
+        </div>
+      </div>
+    </section>
+
+  </div>
+</div>
+<script>
+(function(){
+  var phone = document.getElementById('phone');
+  function setSheet(open){ phone.classList.toggle('sheet-open', open); }
+  document.getElementById('openFilters').addEventListener('click', function(){ setSheet(true); });
+  document.getElementById('closeFilters').addEventListener('click', function(){ setSheet(false); });
+  document.getElementById('scrim').addEventListener('click', function(){ setSheet(false); });
+
+  var tog = document.getElementById('rtog'), body = document.getElementById('rbody');
+  tog.addEventListener('click', function(){
+    var open = body.classList.toggle('open');
+    tog.classList.toggle('closed', !open);
+    tog.querySelector('.rlabel').textContent = open ? 'Hide reasoning' : 'Show reasoning';
+  });
+})();
+</script>
+</body>
+</html>

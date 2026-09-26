@@ -8,7 +8,7 @@ import { useEffect, useRef } from "react"
 // ---------------------------------------------------------------------------
 export const CONFIG = {
   cell: { desktop: 11, min: 8, refWidth: 1440 }, // px; scales with viewport width
-  region: { desktopStart: 0.45, mobileBreakpoint: 768, mobileHeightFrac: 0.56, heightFrac: 0.94 },
+  region: { desktopStart: 0.45, mobileBreakpoint: 1024, mobileHeightFrac: 0.85, heightFrac: 0.85 }, // below the breakpoint the bouquet uses the full width
   grid: { size: 80, color: "#E8E4DE", width: 1, gap: 18 }, // gap: open space around each intersection
   alphaThreshold: 128, // bake: a cell is either fully on or off
   bakeNoise: { enabled: false, scale: 6, threshold: 0.6 }, // smooth ±1 step on blooms, baked once
@@ -805,11 +805,26 @@ export default function PixelFlower({ className }: { className?: string }) {
     function bake() {
       if (cols === 0 || rows === 0) { nCells = 0; return } // parent not laid out yet; render() retries
       bakePass()
-      // centre the baked silhouette in the region, then bake again at the shifted origin
-      let minC = cols, maxC = -1
-      for (let k = 0; k < nCells; k++) { if (cCol[k] < minC) minC = cCol[k]; if (cCol[k] > maxC) maxC = cCol[k] }
-      const shift = Math.round(cols / 2 - (minC + maxC + 1) / 2)
-      if (maxC >= 0 && shift !== 0) { baseX += shift; bakePass() }
+      // measure the baked silhouette, then rescale so the bouquet itself (not
+      // its bounding scene box) spans `heightFrac` of the height, capped by the
+      // width available, and centre it horizontally; bake again at the new scale
+      let minC = cols, maxC = -1, minR = rows, maxR = -1
+      for (let k = 0; k < nCells; k++) {
+        if (cCol[k] < minC) minC = cCol[k]; if (cCol[k] > maxC) maxC = cCol[k]
+        if (cRow[k] < minR) minR = cRow[k]; if (cRow[k] > maxR) maxR = cRow[k]
+      }
+      if (maxC < 0) return
+      const mobile = W < CONFIG.region.mobileBreakpoint
+      const wantH = rows * (mobile ? CONFIG.region.mobileHeightFrac : CONFIG.region.heightFrac)
+      const gotH = maxR - minR + 1, gotW = maxC - minC + 1
+      const byHeight = wantH / gotH
+      const byWidth = (cols - 2) / gotW
+      const grow = Math.min(byHeight, byWidth)
+      sceneScale *= grow
+      // horizontal centring at the new scale: the silhouette's centre scales about baseX
+      const centre = baseX + ((minC + maxC + 1) / 2 - baseX) * grow
+      baseX += Math.round(cols / 2 - centre)
+      bakePass()
     }
     function bakePass() {
       const n = cols * rows

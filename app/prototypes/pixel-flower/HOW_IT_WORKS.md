@@ -71,10 +71,12 @@ petal edge never turns green and a stem never turns pink. Then the cell-space pa
 - **Leaves** — cell with nothing of the leaf above it is the top edge (light); nothing below is the
   underside (dark); otherwise mid.
 
-`bake()` runs the pass twice: the first pass measures the silhouette's column extent, the origin is
-shifted so the bouquet is centred in its region, and the second pass bakes at the shifted origin.
-The bouquet scales to `region.heightFrac` of the viewport height on desktop (cells stay the same size;
-the bouquet just spans more of them).
+`bake()` runs the pass twice: the first pass measures the baked silhouette's extent, the scene
+scale is corrected so the bouquet itself (not its bounding scene box) spans `region.heightFrac` of
+the height (85% at every breakpoint via `heightFrac` / `mobileHeightFrac`, capped by the width
+available), the origin
+is shifted so it is centred in its region, and the second pass bakes at that scale. Cells stay the
+same size; the bouquet just spans more or fewer of them as the container's height changes.
 
 The result is packed into struct-of-arrays (`cCol`, `cRow`, `cColor`, `cGroup`, `cLag`). A full-resolution render of the same
 parts goes to a second canvas for the debug view.
