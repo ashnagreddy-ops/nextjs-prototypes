@@ -1,56 +1,56 @@
 import * as C from "./config"
-import { type Mask, isSolid, surfaceRuns } from "./mask"
-import type { Rng } from "./rng"
 import { rgba } from "./color"
+import { type Mask, isSolid, surfaceRuns } from "./mask"
+import { type Rng, valueNoise } from "./rng"
+import { clamp } from "./stroke"
 
 export type SnowCap = {
   xs: Float32Array // one sample per ~2px along an upward-facing edge
   ys: Float32Array
-  hs: Float32Array // target mound height at each sample
-  top: number // bounds for the shading gradient
-  bottom: number
+  hs: Float32Array // target drift height at each sample
+  sparkles: { k: number; lift: number; r: number }[] // sample index, height above the drift top
   start: number
   duration: number
 }
 
-// A soft mound on each upward-facing run: full in the middle, thin at the ends,
-// a little lumpy, and never taller than the free space above it.
+// A white drift on each upward-facing run: thickness varies 3-10px with seeded noise,
+// thin at the ends, never taller than the free space above it.
 export function buildSnow(rng: Rng, m: Mask, fs: number): SnowCap[] {
   const caps: SnowCap[] = []
+  const noise = valueNoise(rng)
+  const sc = clamp(fs / C.STROKE_REF_FONT_PX, 0.6, 1.6)
   const runs = surfaceRuns(m, "top", C.SNOW_NORMAL_MIN).filter((r) => r.length >= C.SNOW_MIN_RUN_EM * fs)
   for (const run of runs) {
-    const H = Math.min(fs * rng.range(C.SNOW_HEIGHT_MIN_EM, C.SNOW_HEIGHT_MAX_EM), run.length * C.SNOW_MAX_ASPECT)
-    const f1 = rng.range(6, 12)
-    const f2 = rng.range(14, 24)
-    const ph1 = rng.range(0, Math.PI * 2)
-    const ph2 = rng.range(0, Math.PI * 2)
+    const off = rng.range(0, 64)
     const step = 2
     const n = Math.max(2, Math.floor((run.length - 1) / step) + 1)
     const xs = new Float32Array(n)
     const ys = new Float32Array(n)
     const hs = new Float32Array(n)
-    let top = Infinity
-    let bottom = -Infinity
     for (let k = 0; k < n; k++) {
       const p = run[Math.min(run.length - 1, k * step)]
       const u = k / (n - 1)
-      const bump = 1 + C.SNOW_BUMPINESS * (0.6 * Math.sin(u * f1 + ph1) + 0.4 * Math.sin(u * f2 + ph2))
-      let h = H * Math.pow(Math.sin(Math.PI * u), C.SNOW_PROFILE_POWER) * bump
+      const nz = 0.5 + 0.5 * noise(off + (k * step) / (C.SNOW_NOISE_WAVELEN_EM * fs))
+      const thick = (C.SNOW_MIN_PX + (C.SNOW_MAX_PX - C.SNOW_MIN_PX) * nz) * sc
+      let h = Math.min(thick, run.length * C.SNOW_MAX_ASPECT) * Math.pow(Math.sin(Math.PI * u), C.SNOW_PROFILE_POWER)
       let free = 0
       while (free < h + 2 && p.y - free - 1 >= 0 && !isSolid(m, p.x, p.y - free - 1)) free++
       h = Math.max(0, Math.min(h, free - 1))
       xs[k] = p.x + 0.5
       ys[k] = p.y
       hs[k] = h
-      top = Math.min(top, p.y - h)
-      bottom = Math.max(bottom, p.y)
+    }
+    const sparkles: SnowCap["sparkles"] = []
+    const count = Math.min(C.SNOW_SPARKLE_MAX, Math.round(run.length * C.SNOW_SPARKLES_PER_PX + rng.next()))
+    for (let i = 0; i < count; i++) {
+      const k = 1 + Math.floor(rng.next() * (n - 2))
+      if (hs[k] > 2) sparkles.push({ k, lift: rng.range(-1, 5), r: rng.range(0.5, 1) })
     }
     caps.push({
       xs,
       ys,
       hs,
-      top,
-      bottom: bottom + C.SNOW_OVERLAP_PX,
+      sparkles,
       start: C.SNOW_DELAY + rng.range(0, C.SNOW_STAGGER),
       duration: rng.range(C.SNOW_DURATION_MIN, C.SNOW_DURATION_MAX),
     })
@@ -58,24 +58,32 @@ export function buildSnow(rng: Rng, m: Mask, fs: number): SnowCap[] {
   return caps
 }
 
-export function drawSnow(ctx: CanvasRenderingContext2D, cap: SnowCap, p: number) {
-  if (p <= 0) return
+// Smooth drift outline through the sample tops, shifted down by `dy`.
+function drift(ctx: CanvasRenderingContext2D, cap: SnowCap, p: number, dy: number) {
   const { xs, ys, hs } = cap
   const n = xs.length
-  const grad = ctx.createLinearGradient(0, cap.top, 0, cap.bottom)
-  grad.addColorStop(0, rgba(C.SNOW_COLOR, C.SNOW_ALPHA))
-  grad.addColorStop(1, rgba(C.SNOW_SHADE, C.SNOW_ALPHA))
-  ctx.fillStyle = grad
+  const top = (k: number) => ys[k] - hs[k] * p + dy
   ctx.beginPath()
-  ctx.moveTo(xs[0], ys[0] - hs[0] * p)
-  // smooth top through sample midpoints
-  for (let k = 1; k < n - 1; k++) {
-    const mx = (xs[k] + xs[k + 1]) / 2
-    const my = (ys[k] - hs[k] * p + ys[k + 1] - hs[k + 1] * p) / 2
-    ctx.quadraticCurveTo(xs[k], ys[k] - hs[k] * p, mx, my)
-  }
-  ctx.lineTo(xs[n - 1], ys[n - 1] - hs[n - 1] * p)
-  for (let k = n - 1; k >= 0; k--) ctx.lineTo(xs[k], ys[k] + C.SNOW_OVERLAP_PX)
+  ctx.moveTo(xs[0], top(0))
+  for (let k = 1; k < n - 1; k++) ctx.quadraticCurveTo(xs[k], top(k), (xs[k] + xs[k + 1]) / 2, (top(k) + top(k + 1)) / 2)
+  ctx.lineTo(xs[n - 1], top(n - 1))
+  for (let k = n - 1; k >= 0; k--) ctx.lineTo(xs[k], ys[k] + C.SNOW_OVERLAP_PX + dy)
   ctx.closePath()
   ctx.fill()
+}
+
+export function drawSnow(ctx: CanvasRenderingContext2D, cap: SnowCap, p: number) {
+  if (p <= 0) return
+  ctx.fillStyle = C.SNOW_SHADOW
+  drift(ctx, cap, p, C.SNOW_SHADOW_OFFSET_PX)
+  ctx.fillStyle = C.SNOW
+  drift(ctx, cap, p, 0)
+  if (p > 0.6) {
+    ctx.fillStyle = rgba(C.SNOW, clamp((p - 0.6) / 0.4, 0, 1))
+    for (const s of cap.sparkles) {
+      ctx.beginPath()
+      ctx.arc(cap.xs[s.k], cap.ys[s.k] - cap.hs[s.k] - s.lift, s.r, 0, Math.PI * 2)
+      ctx.fill()
+    }
+  }
 }

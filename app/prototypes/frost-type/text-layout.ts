@@ -1,5 +1,5 @@
 import * as C from "./config"
-import { fontFor } from "./glyph"
+import { fontFor } from "./font"
 
 export type Layout = {
   fs: number

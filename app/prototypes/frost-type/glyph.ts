@@ -1,24 +1,24 @@
 import * as C from "./config"
-import { hexToRgb, rgba } from "./color"
+import { mix, rgba } from "./color"
+import { fontFor } from "./font"
 import { buildFiligree } from "./filigree"
 import { buildIcicles, drawIcicle, type Icicle } from "./icicles"
 import { buildMask, type Mask } from "./mask"
-import { createRng, hashSeed } from "./rng"
+import { createRng, hashSeed, valueNoise } from "./rng"
 import { buildSnow, drawSnow, type SnowCap } from "./snow"
-import { type Stroke, clamp, easeOutCubic, paintSlice, progress } from "./stroke"
+import { advanceEl, clipRelief, drawRelief, makeLayer, makeRelief, type FiliEl, type Layer, type Relief } from "./relief"
+import { clamp, easeOutCubic, progress } from "./stroke"
 
 // Salts so each subsystem draws from its own random stream.
-const SALT = { freeze: 1, icicles: 2, snow: 3, filigree: 4, grain: 5 }
-
-type Layer = { c: HTMLCanvasElement; ctx: CanvasRenderingContext2D }
+const SALT = { freeze: 1, icicles: 2, snow: 3, filigree: 4, body: 5 }
 
 // Layers that only exist while the glyph animates; dropped once it's baked to `cache`.
 type Live = {
   body: Layer
   deco: Layer // icicles + snow, redrawn while growing
-  light: Layer // filigree, painted incrementally
-  shadow: Layer
-  clip: Layer // glyph shape dilated by FILIGREE_OVERFLOW_PX
+  relief: Relief // filigree, painted incrementally, kept inside the glyph
+  spill: Relief | null // filigree that spills past the silhouette (unclipped), if any
+  clip: Layer // glyph shape dilated by RELIEF_CLIP_OVERFLOW_PX
 }
 
 export type BuiltGlyph = {
@@ -31,7 +31,7 @@ export type BuiltGlyph = {
   freeze: { pts: { x: number; y: number }[]; radius: number }
   icicles: Icicle[]
   snow: SnowCap[]
-  strokes: Stroke[]
+  elems: FiliEl[]
   bodySettled: boolean
   decoDone: boolean
   filiDone: boolean
@@ -40,26 +40,17 @@ export type BuiltGlyph = {
   cache: HTMLCanvasElement | null
 }
 
-export const fontFor = (fs: number) => `${C.FONT_WEIGHT} ${fs}px ${C.FONT_FAMILY}`
-
-function makeLayer(w: number, h: number, dpr: number): Layer {
-  const c = document.createElement("canvas")
-  c.width = Math.round(w * dpr)
-  c.height = Math.round(h * dpr)
-  const ctx = c.getContext("2d")!
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
-  return { c, ctx }
-}
 
 export function buildGlyph(char: string, seed: number, fs: number, dpr: number): BuiltGlyph {
   const measure = document.createElement("canvas").getContext("2d")!
   measure.font = fontFor(fs)
   const mt = measure.measureText(char)
-  const padX = C.GLYPH_PAD_EM * fs
+  const spillPad = Math.max(C.SPILL_DISTANCE_PX, C.BREAK_MAX_PX, C.INCOMING_START_MAX_PX, C.FLAKE_R_MAX_PX * C.FLAKE_OVERSHOOT) + 4 // room for anything that spills past the glyph
+  const padX = Math.max(C.GLYPH_PAD_EM * fs, spillPad)
   const ox = Math.round(padX + mt.actualBoundingBoxLeft)
-  const oy = Math.round(C.SNOW_PAD_EM * fs + mt.actualBoundingBoxAscent)
+  const oy = Math.round(Math.max(C.SNOW_PAD_EM * fs, spillPad) + mt.actualBoundingBoxAscent)
   const w = Math.ceil(ox + mt.actualBoundingBoxRight + padX)
-  const h = Math.ceil(oy + mt.actualBoundingBoxDescent + C.ICICLE_PAD_EM * fs)
+  const h = Math.ceil(oy + mt.actualBoundingBoxDescent + Math.max(C.ICICLE_PAD_EM * fs, spillPad))
 
   const text = (ctx: CanvasRenderingContext2D, mode: "fill" | "stroke" = "fill") => {
     ctx.font = fontFor(fs)
@@ -74,27 +65,19 @@ export function buildGlyph(char: string, seed: number, fs: number, dpr: number):
     text(ctx)
   }, w, h)
 
-  const body = renderBody(mask, fs, w, h, dpr, hashSeed(seed, SALT.grain), text)
+  const { els: elems, facets, bubbles } = buildFiligree(createRng(hashSeed(seed, SALT.filigree)), mask, fs)
+  const body = renderBody(mask, fs, w, h, dpr, hashSeed(seed, SALT.body), text, facets, bubbles)
   const deco = makeLayer(w, h, dpr)
-  const light = makeLayer(w, h, dpr)
-  const shadow = makeLayer(w, h, dpr)
-  for (const [l, color] of [
-    [light, C.FILIGREE_COLOR],
-    [shadow, C.FILIGREE_SHADOW],
-  ] as const) {
-    l.ctx.lineCap = "round"
-    l.ctx.lineJoin = "round"
-    l.ctx.strokeStyle = color // opaque: the layer's alpha is applied when compositing
-  }
   const clip = makeLayer(w, h, dpr)
   clip.ctx.fillStyle = "#fff"
   clip.ctx.strokeStyle = "#fff"
-  clip.ctx.lineWidth = C.FILIGREE_OVERFLOW_PX * 2
+  clip.ctx.lineWidth = C.RELIEF_CLIP_OVERFLOW_PX * 2
   clip.ctx.lineJoin = "round"
   text(clip.ctx)
   text(clip.ctx, "stroke")
 
-  const strokes = buildFiligree(createRng(hashSeed(seed, SALT.filigree)), mask, fs)
+  const relief = makeRelief(w, h, dpr)
+  const spill = elems.some((e) => e.spill) ? makeRelief(w, h, dpr) : null
   const icicles = buildIcicles(createRng(hashSeed(seed, SALT.icicles)), mask, fs)
   const snow = buildSnow(createRng(hashSeed(seed, SALT.snow)), mask, fs)
 
@@ -108,84 +91,125 @@ export function buildGlyph(char: string, seed: number, fs: number, dpr: number):
     freeze: freezeInfo(createRng(hashSeed(seed, SALT.freeze)), mask),
     icicles,
     snow,
-    strokes,
+    elems,
     bodySettled: false,
     decoDone: false,
     filiDone: false,
-    pending: strokes.length + icicles.length + snow.length,
-    live: { body, deco, light, shadow, clip },
+    pending: elems.length + icicles.length + snow.length,
+    live: { body, deco, relief, spill, clip },
     cache: null,
   }
 }
 
-// Ice body: translucent fill, bright rim inside the edge (whiter where it faces the
-// light), vertical tint and a fine frost grain. Shaded per pixel at mask resolution,
-// then upscaled and trimmed to the crisp glyph shape with a thin edge line on top.
+// Ice body: a vertical ICE_LIGHT -> ICE_MID -> ICE_DEEP gradient, a blurred ICE_DEEP outline
+// shaded inward (thick, glassy edges), thin ICE_HIGHLIGHT / OUTLINE rims on the upper-left /
+// lower-right edges, and soft white streaks. Shading is drawn source-atop so it stays inside.
 function renderBody(
   m: Mask,
   fs: number,
   w: number,
   h: number,
   dpr: number,
-  grainSeed: number,
-  text: (ctx: CanvasRenderingContext2D, mode?: "fill" | "stroke") => void
+  seed: number,
+  text: (ctx: CanvasRenderingContext2D, mode?: "fill" | "stroke") => void,
+  facets: { xy: number[]; alpha: number }[],
+  bubbles: { x: number; y: number; r: number }[]
 ): Layer {
-  const small = document.createElement("canvas")
-  small.width = m.w
-  small.height = m.h
-  const sctx = small.getContext("2d")!
-  const img = sctx.createImageData(m.w, m.h)
-  const px = img.data
-  const top = hexToRgb(C.BODY_TOP)
-  const bot = hexToRgb(C.BODY_BOTTOM)
-  const ll = Math.hypot(C.LIGHT_DIR.x, C.LIGHT_DIR.y)
-  const lx = C.LIGHT_DIR.x / ll
-  const ly = C.LIGHT_DIR.y / ll
-  const rimW = Math.max(1, C.BODY_RIM_EM * fs)
-  const D = (x: number, y: number) => (x < 0 || y < 0 || x >= m.w || y >= m.h ? 0 : m.dist[y * m.w + x])
-  for (let y = 0; y < m.h; y++) {
-    const t = clamp((y - m.top) / (m.bottom - m.top || 1), 0, 1)
-    for (let x = 0; x < m.w; x++) {
-      const i = y * m.w + x
-      const cov = m.cov[i]
-      if (!cov) continue
-      const gx = D(x + 1, y) - D(x - 1, y)
-      const gy = D(x, y + 1) - D(x, y - 1)
-      const gl = Math.hypot(gx, gy)
-      // gradient points inward, so the outward normal is its negative
-      const lit = gl ? Math.max(0, -(gx * lx + gy * ly) / gl) : 0
-      const rim = Math.exp(-m.dist[i] / rimW)
-      const k = lit * rim * C.BODY_HIGHLIGHT
-      const grain = 1 + C.BODY_GRAIN * (hash2(x, y, grainSeed) - 0.5)
-      const a = (C.BODY_CORE_ALPHA + (C.BODY_RIM_ALPHA - C.BODY_CORE_ALPHA) * rim + 0.25 * k) * grain * (cov / 255)
-      for (let c = 0; c < 3; c++) {
-        const base = top[c] + (bot[c] - top[c]) * t
-        px[i * 4 + c] = base + (255 - base) * k
-      }
-      px[i * 4 + 3] = clamp(a, 0, 1) * 255
-    }
-  }
-  sctx.putImageData(img, 0, 0)
-
   const body = makeLayer(w, h, dpr)
   const ctx = body.ctx
-  ctx.imageSmoothingEnabled = true
-  ctx.drawImage(small, 0, 0, m.w, m.h)
-  ctx.globalCompositeOperation = "destination-in"
-  ctx.fillStyle = "#fff"
+  const top = m.top
+  const bottom = m.bottom + 1
+  const blur = (em: number) => (typeof ctx.filter === "string" ? `blur(${em * fs * dpr}px)` : "none")
+
+  const grad = ctx.createLinearGradient(0, top, 0, bottom)
+  grad.addColorStop(0, C.ICE_LIGHT)
+  grad.addColorStop(0.5, C.ICE_MID)
+  grad.addColorStop(1, mix(C.ICE_DEEP, C.ICE_MID, C.BODY_BOTTOM_LIGHTEN))
+  ctx.globalAlpha = C.BODY_ALPHA
+  ctx.fillStyle = grad
   text(ctx)
-  ctx.globalCompositeOperation = "source-over"
-  ctx.strokeStyle = rgba(C.EDGE_COLOR, C.EDGE_ALPHA)
-  ctx.lineWidth = C.EDGE_WIDTH_PX
+  ctx.globalAlpha = 1
+
+  ctx.globalCompositeOperation = "source-atop"
+  ctx.filter = blur(C.INNER_SHADE_BLUR_EM)
+  ctx.strokeStyle = rgba(C.ICE_DEEP, C.INNER_SHADE_ALPHA)
+  ctx.lineWidth = C.INNER_SHADE_WIDTH_EM * fs
   ctx.lineJoin = "round"
   text(ctx, "stroke")
-  return body
-}
+  ctx.filter = "none"
 
-function hash2(x: number, y: number, s: number) {
-  let h = (Math.imul(x, 374761393) + Math.imul(y, 668265263) + s) | 0
-  h = Math.imul(h ^ (h >>> 13), 1274126177)
-  return ((h ^ (h >>> 16)) >>> 0) / 4294967296
+  // inner glow: the letter looks lit from within, centred a little above the centroid
+  const glowR = Math.sqrt(m.area) * C.INNER_GLOW_RADIUS_RATIO
+  const glow = ctx.createRadialGradient(m.cx, m.cy + C.INNER_GLOW_OFFSET_EM * fs, 0, m.cx, m.cy + C.INNER_GLOW_OFFSET_EM * fs, glowR)
+  glow.addColorStop(0, rgba(C.ICE_LIGHT, C.INNER_GLOW_ALPHA))
+  glow.addColorStop(1, rgba(C.ICE_LIGHT, 0))
+  ctx.fillStyle = glow
+  ctx.fillRect(0, 0, w, h)
+
+  // long, soft, curved streaks warped by seeded noise
+  const rng = createRng(seed)
+  const noise = valueNoise(rng)
+  const H = bottom - top
+  ctx.filter = blur(C.STREAK_BLUR_EM)
+  ctx.lineCap = "round"
+  ctx.lineJoin = "round"
+  for (let k = 0; k < C.STREAK_COUNT; k++) {
+    const x0 = rng.range(0, w)
+    const lean = rng.range(-1, 1) * C.STREAK_LEAN * H
+    const t0 = rng.range(0, 1 - C.STREAK_LENGTH_MIN)
+    const t1 = Math.min(1, t0 + rng.range(C.STREAK_LENGTH_MIN, C.STREAK_LENGTH_MAX))
+    const warpOff = rng.range(0, 64)
+    ctx.strokeStyle = rgba("#ffffff", rng.range(C.STREAK_ALPHA_MIN, C.STREAK_ALPHA_MAX))
+    ctx.lineWidth = rng.range(C.STREAK_WIDTH_MIN_EM, C.STREAK_WIDTH_MAX_EM) * fs
+    ctx.beginPath()
+    for (let i = 0; i <= 14; i++) {
+      const t = t0 + ((t1 - t0) * i) / 14
+      const x = x0 + lean * t + noise(warpOff + t * 3) * C.STREAK_WARP_EM * fs
+      if (i === 0) ctx.moveTo(x, top + t * H)
+      else ctx.lineTo(x, top + t * H)
+    }
+    ctx.stroke()
+  }
+  ctx.filter = "none"
+
+  // inner structure: faint facet lines along the strokes, tiny trapped bubbles
+  ctx.lineWidth = C.FACET_WIDTH_PX
+  for (const f of facets) {
+    ctx.strokeStyle = rgba("#ffffff", f.alpha)
+    ctx.beginPath()
+    ctx.moveTo(f.xy[0], f.xy[1])
+    for (let i = 2; i < f.xy.length; i += 2) ctx.lineTo(f.xy[i], f.xy[i + 1])
+    ctx.stroke()
+  }
+  ctx.fillStyle = rgba("#ffffff", C.BUBBLE_ALPHA)
+  for (const b of bubbles) {
+    ctx.beginPath()
+    ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2)
+    ctx.fill()
+  }
+  ctx.globalCompositeOperation = "source-over"
+
+  // glyph minus itself shifted by (d, d) leaves only its upper-left edges (and vice versa)
+  const d = Math.max(C.RIM_MIN_PX, C.RIM_EM * fs)
+  const rim = (color: string, dx: number, alpha: number) => {
+    const t = makeLayer(w, h, dpr)
+    t.ctx.fillStyle = "#fff"
+    text(t.ctx)
+    t.ctx.globalCompositeOperation = "destination-out"
+    t.ctx.save()
+    t.ctx.translate(dx, dx)
+    text(t.ctx)
+    t.ctx.restore()
+    t.ctx.globalCompositeOperation = "source-in"
+    t.ctx.fillStyle = color
+    t.ctx.fillRect(0, 0, w, h)
+    ctx.globalAlpha = alpha
+    ctx.drawImage(t.c, 0, 0, w, h)
+    ctx.globalAlpha = 1
+  }
+  rim(C.ICE_HIGHLIGHT, d, C.RIM_HIGHLIGHT_ALPHA)
+  rim(C.OUTLINE, -d, C.RIM_OUTLINE_ALPHA)
+  return body
 }
 
 // The freeze-in reveal expands from a couple of deep interior points until it covers the glyph.
@@ -254,36 +278,23 @@ export function updateGlyph(b: BuiltGlyph, age: number): boolean {
   } else if (!b.decoDone) pending += b.snow.length + b.icicles.length
 
   if (!b.filiDone && age >= C.FILIGREE_DELAY) {
-    const targets = [
-      { ctx: live.light.ctx, off: 0 },
-      { ctx: live.shadow.ctx, off: C.FILIGREE_SHADOW_OFFSET },
-    ]
-    let painted = false
+    let paintedClipped = false
+    let paintedSpill = false
     let left = 0
-    for (const s of b.strokes) {
-      if (s.drawn >= s.length) continue
-      const target = s.length * progress(age, s.start, s.duration)
-      if (target > s.drawn + 0.01) {
-        paintSlice(targets, s, s.drawn, target)
-        s.drawn = target
-        painted = true
+    for (const e of b.elems) {
+      const r = advanceEl(e, age, live.relief, live.spill)
+      if (r.painted) {
+        if (r.spill) paintedSpill = true
+        else paintedClipped = true
       }
-      if (s.drawn < s.length) left++
+      if (!r.done) left++
     }
-    if (painted) {
-      // keep filigree inside the glyph: only the new slice can poke out, but this is cheap
-      for (const l of [live.light, live.shadow]) {
-        l.ctx.save()
-        l.ctx.setTransform(1, 0, 0, 1, 0, 0)
-        l.ctx.globalCompositeOperation = "destination-in"
-        l.ctx.drawImage(live.clip.c, 0, 0)
-        l.ctx.restore()
-      }
-      changed = true
-    }
+    // only the new slice can poke out, but re-clipping the layers is cheap
+    if (paintedClipped) clipRelief(live.relief, live.clip.c)
+    if (paintedClipped || paintedSpill) changed = true
     b.filiDone = left === 0
     pending += left
-  } else if (!b.filiDone) pending += b.strokes.length
+  } else if (!b.filiDone) pending += b.elems.length
 
   b.pending = pending
   if (b.bodySettled && b.decoDone && b.filiDone) {
@@ -318,11 +329,8 @@ export function drawGlyph(ctx: CanvasRenderingContext2D, b: BuiltGlyph, age: num
   } else ctx.drawImage(live.body.c, 0, 0, b.w, b.h)
   if (age >= decoStart) ctx.drawImage(live.deco.c, 0, 0, b.w, b.h)
   if (age >= C.FILIGREE_DELAY) {
-    ctx.globalAlpha = C.FILIGREE_SHADOW_ALPHA
-    ctx.drawImage(live.shadow.c, 0, 0, b.w, b.h)
-    ctx.globalAlpha = C.FILIGREE_ALPHA
-    ctx.drawImage(live.light.c, 0, 0, b.w, b.h)
-    ctx.globalAlpha = 1
+    drawRelief(ctx, live.relief, b.w, b.h, b.dpr)
+    if (live.spill) drawRelief(ctx, live.spill, b.w, b.h, b.dpr)
   }
 }
 
@@ -332,7 +340,7 @@ function bake(b: BuiltGlyph) {
   drawGlyph(out.ctx, b, Infinity)
   b.cache = out.c
   b.live = null
-  b.strokes = []
+  b.elems = []
   b.icicles = []
   b.snow = []
 }

@@ -1,17 +1,11 @@
-// Polylines with cumulative distances, and an incremental tapered painter.
+// Polyline helpers, easings and growth phases.
 
-export type Stroke = {
-  pts: Float32Array // x,y pairs
-  cum: Float32Array // cumulative distance at each point
-  length: number
-  w0: number // width at base
-  w1: number // width at tip
-  start: number // ms on the glyph clock
-  duration: number
-  drawn: number // px already painted
-}
+export type Phase = { len: number; ms: number; ease: "out" | "inout" | "back" }
 
 export const easeOutCubic = (t: number) => 1 - Math.pow(1 - t, 3)
+export const easeInOutCubic = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2)
+// Ease-out with a small overshoot (peaks ~1.1, settles at 1).
+export const easeOutBack = (t: number) => 1 + 2.70158 * Math.pow(t - 1, 3) + 1.70158 * Math.pow(t - 1, 2)
 export const invEaseOutCubic = (p: number) => 1 - Math.cbrt(1 - p)
 export const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v))
 
@@ -61,34 +55,4 @@ export function pointAt(s: { pts: Float32Array; cum: Float32Array }, d: number) 
   const bx = s.pts[hi * 2]
   const by = s.pts[hi * 2 + 1]
   return { x: ax + (bx - ax) * t, y: ay + (by - ay) * t, angle: Math.atan2(by - ay, bx - ax), index: lo }
-}
-
-// Paint only stroke[from..to] onto the layers, width tapering along the full length.
-// Each target is a context plus an offset (the shadow layer is drawn shifted).
-export function paintSlice(
-  targets: { ctx: CanvasRenderingContext2D; off: number }[],
-  s: Stroke,
-  from: number,
-  to: number
-) {
-  const a = pointAt(s, from)
-  const b = pointAt(s, to)
-  let px = a.x
-  let py = a.y
-  let pd = from
-  const seg = (x: number, y: number, d: number) => {
-    const w = s.w0 + (s.w1 - s.w0) * ((pd + d) / 2 / s.length)
-    for (const { ctx, off } of targets) {
-      ctx.lineWidth = w
-      ctx.beginPath()
-      ctx.moveTo(px + off, py + off)
-      ctx.lineTo(x + off, y + off)
-      ctx.stroke()
-    }
-    px = x
-    py = y
-    pd = d
-  }
-  for (let i = a.index + 1; i <= b.index; i++) seg(s.pts[i * 2], s.pts[i * 2 + 1], s.cum[i])
-  seg(b.x, b.y, to)
 }

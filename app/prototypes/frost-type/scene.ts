@@ -129,7 +129,7 @@ export function createScene(canvas: HTMLCanvasElement, opts: { onFirstType: () =
     if (!C.TYPEABLE.test(e.key) || glyphs.length >= C.MAX_GLYPHS) return
     e.preventDefault()
     if (!glyphs.length) opts.onFirstType()
-    glyphs.push({ char: e.key, index: glyphs.length, birth: performance.now(), ffwd: false, built: null })
+    glyphs.push({ char: C.FORCE_UPPERCASE ? e.key.toUpperCase() : e.key, index: glyphs.length, birth: performance.now(), ffwd: false, built: null })
     layoutDirty = true
   }
 
