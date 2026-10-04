@@ -83,15 +83,15 @@ export type Plant = {
   start: number // index of the word's first glyph
   host0: Host // the word's first glyph: its birth is the plant's clock
   style: C.WordStyle
-  variety: C.Variety
+  varieties: C.Variety[] // the word's bract colours: one or two
   letters: PlantLetter[]
   gone: PlantLetter[] // withering
   vines: Vine[]
   clusters: Cluster[]
   growth: GrowthPoint[]
   settledLen: number // letters count at the last settle (-1 = needs one)
-  drapeTarget: number
-  bloomTarget: number
+  drapeTarget: number // base: grows with the word's length (drapes(p))
+  bloomTarget: number // base: grows with the word's length (bloomSites(p))
   hugPhase: number
   growthGaps: number[]
   bridgeEvery: number
@@ -108,14 +108,14 @@ const SALT = { plant: 21, letter: 22, growth: 23, settle: 24, arch: 25, attempt:
 
 const randInt = (rng: Rng, [lo, hi]: readonly [number, number]) => lo + Math.floor(rng.next() * (hi - lo + 1))
 
-export function createPlant(seed: number, start: number, host0: Host, style: C.WordStyle, variety: C.Variety): Plant {
+export function createPlant(seed: number, start: number, host0: Host, style: C.WordStyle, varieties: C.Variety[]): Plant {
   const rng = createRng(hashSeed(seed, start, SALT.plant))
   return {
     seed,
     start,
     host0,
     style,
-    variety,
+    varieties,
     letters: [],
     gone: [],
     vines: [],
@@ -149,7 +149,11 @@ function sites(p: Plant) {
   const hero = a.some((v) => v.bloom === "hero") ? 0 : 1
   return a.filter((v) => v.bloom !== "none").length + hero
 }
-const canBloom = (p: Plant) => sites(p) < p.bloomTarget
+// Budgets grow with the word so long words aren't left bare.
+const bloomSites = (p: Plant) => p.bloomTarget + Math.floor(p.letters.length / C.BLOOM_EXTRA_LETTERS)
+const drapes = (p: Plant) => p.drapeTarget + Math.floor(p.letters.length / C.DRAPE_EXTRA_LETTERS)
+const growthCap = (n: number) => Math.max(C.GROWTH_MAX, Math.ceil(n / C.GROWTH_LETTERS_PER))
+const canBloom = (p: Plant) => sites(p) < bloomSites(p)
 
 // ---- Ink and calm grid ---------------------------------------------------------
 
@@ -341,13 +345,17 @@ function frontCells(v: Built, clusters: Cluster[]) {
   if (v.layer === 1)
     for (const l of v.leaves)
       for (let t = 0.2; t <= 1; t += 0.2) out.push(cellKey(l.x + Math.cos(l.angle) * l.len * t, l.y + Math.sin(l.angle) * l.len * t))
-  for (const c of clusters) {
-    const cx = c.ax + Math.cos(DOWN + c.stalkAngle) * c.stalk
-    const cy = c.ay + Math.sin(DOWN + c.stalkAngle) * c.stalk
-    const r = c.len * 1.05
-    const st = em(C.CALM_CELL_EM) * 0.7
-    for (let y = -r; y <= r; y += st) for (let x = -r; x <= r; x += st) if (x * x + y * y <= r * r) out.push(cellKey(cx + x, cy + y))
-  }
+  for (const c of clusters) out.push(...clusterCells(c))
+  return out
+}
+
+function clusterCells(c: Cluster) {
+  const out: number[] = []
+  const cx = c.ax + Math.cos(DOWN + c.stalkAngle) * c.stalk
+  const cy = c.ay + Math.sin(DOWN + c.stalkAngle) * c.stalk
+  const r = c.len * 1.05
+  const st = em(C.CALM_CELL_EM) * 0.7
+  for (let y = -r; y <= r; y += st) for (let x = -r; x <= r; x += st) if (x * x + y * y <= r * r) out.push(cellKey(cx + x, cy + y))
   return out
 }
 
@@ -384,6 +392,10 @@ function grow(
 }
 
 function commit(p: Plant, b: Built, owner: PlantLetter, clusters: Cluster[], cells = frontCells(b, clusters)): Vine {
+  // ownership: deleting a glyph removes only its own elements, so a child belongs to the later of
+  // its own glyph and its parent's, never orphaned when the parent's glyph goes
+  const parentOwner = b.parent >= 0 ? p.vines[b.parent].owner : null
+  if (parentOwner && parentOwner.j > owner.j) owner = parentOwner
   const v: Vine = { ...b, id: p.vines.length, owner, dying: Infinity, dead: false, cells }
   p.vines.push(v)
   p.clusters.push(...clusters)
@@ -434,9 +446,22 @@ function thorns(rng: Rng, p: Plant, v: Built, avoid: number[]) {
   }
 }
 
-function cluster(p: Plant, rng: Rng, v: Built, id: number, s: number, kind: Cluster["kind"], start: number, extra?: { stalk?: number; stalkAngle?: number }) {
+// One of the word's colours; a second colour (if the word has one) takes SECOND_VARIETY_SHARE.
+const pickVariety = (p: Plant, rng: Rng) => (p.varieties.length > 1 && rng.next() < C.SECOND_VARIETY_SHARE ? p.varieties[1] : p.varieties[0])
+
+function cluster(
+  p: Plant,
+  rng: Rng,
+  v: Pick<Built, "pts" | "cum" | "width">,
+  id: number,
+  s: number,
+  kind: Cluster["kind"],
+  start: number,
+  extra?: { stalk?: number; stalkAngle?: number; variety?: C.Variety }
+) {
   const q = sampleAt(v, s)
-  return makeCluster(rng, { vine: id, s, ax: q.x, ay: q.y, kind, start, variety: p.variety, fs: R, stemW: v.width, id: p.clusters.length * 8 + Math.floor(rng.next() * 7), ...extra })
+  const variety = extra?.variety ?? pickVariety(p, rng)
+  return makeCluster(rng, { vine: id, s, ax: q.x, ay: q.y, kind, start, fs: R, stemW: v.width, id: p.clusters.length * 8 + Math.floor(rng.next() * 7), ...extra, variety })
 }
 
 // Children leave on the outer side of the parent's curve, 30-45 degrees off it.
@@ -575,6 +600,7 @@ function growBunch(p: Plant, owner: PlantLetter, parent: Vine, b: BunchSpec, see
     (rng, v, id) => {
       const n = randInt(rng, b.count)
       const out: Cluster[] = []
+      const variety = pickVariety(p, rng) // a bunch is one colour
       let side = rng.sign()
       for (let j = 0; j < n; j++) {
         const u = n === 1 ? 1 : C.BUNCH_FROM + ((1 - C.BUNCH_FROM) * j) / (n - 1)
@@ -583,6 +609,7 @@ function growBunch(p: Plant, owner: PlantLetter, parent: Vine, b: BunchSpec, see
           cluster(p, rng, v, id, s, b.kind, tipPasses(v, s) + C.CLUSTER_GAP_MS + j * C.BUNCH_STAGGER_MS, {
             stalk: b.stalk,
             stalkAngle: j === n - 1 ? 0 : (side = -side) * rad(rng.range(C.BUNCH_STALK_DEG_MIN, C.BUNCH_STALK_DEG_MAX)),
+            variety,
           })
         )
       }
@@ -672,9 +699,9 @@ function growTrunk(p: Plant, gp: GrowthPoint, start: number, seed: number) {
   )
   if (!v) return null
   const rng = createRng(hashSeed(seed, 3))
-  if (count(p, "drape") < p.drapeTarget) growDrape(p, owner, v, hashSeed(seed, 4))
+  if (count(p, "drape") < drapes(p)) growDrape(p, owner, v, hashSeed(seed, 4))
   // a lone trunk in the word takes the second drape too
-  if (count(p, "drape") < p.drapeTarget && count(p, "trunk") === 1) growDrape(p, owner, v, hashSeed(seed, 5))
+  if (count(p, "drape") < drapes(p) && count(p, "trunk") === 1) growDrape(p, owner, v, hashSeed(seed, 5))
   for (const at of branchPoints(rng, C.TRUNK_BARE * v.length, 0.92 * v.length, randInt(rng, p.style.twigs))) growTwig(p, owner, v, at, hashSeed(seed, 6, at | 0))
   return v
 }
@@ -1191,43 +1218,70 @@ export function addLetter(p: Plant, host: Host, letter: Letter) {
   const at = () => t + rng.next() * C.VINE_STAGGER
 
   const last = p.growth[p.growth.length - 1]
-  if (p.growth.length < C.GROWTH_MAX && (!last || j - last.owner.j >= p.growthGaps[(p.growth.length - 1) % p.growthGaps.length])) addGrowth(p, L, at(), hashSeed(seed, 1))
-  if (j % C.HUG_EVERY === p.hugPhase) growHug(p, L, at(), hashSeed(seed, 2))
+  const n0 = p.growth.length
+  if (p.growth.length < growthCap(j + 1) && (!last || j - last.owner.j >= p.growthGaps[(p.growth.length - 1) % p.growthGaps.length])) addGrowth(p, L, at(), hashSeed(seed, 1))
+  // a letter without a growth point of its own always tries a hug
+  if (p.growth.length === n0 || j % C.HUG_EVERY === p.hugPhase) growHug(p, L, at(), hashSeed(seed, 2))
   if (prev) {
     const lastBridge = Math.max(-99, ...alive(p).filter((v) => v.gesture === "bridge").map((v) => v.owner.j))
     if (j - lastBridge >= p.bridgeEvery) growBridge(p, prev, L, at(), hashSeed(seed, 3))
   }
 }
 
-// Backspace: the last letter's stems (and everything they carry) start withering. Returns the
-// clusters that should drop.
+// Backspace: the last letter dies. Its own stems (and anything branching from them) start
+// withering at `age`; nothing is regenerated. Returns the letter and the clusters it owned.
 export function removeLetter(p: Plant, age: number) {
   const L = p.letters.pop()
-  if (!L) return []
+  if (!L) return null
   L.dying = age
   p.gone.push(L)
   p.growth = p.growth.filter((g) => g.owner !== L)
   if (p.archDebug?.owner === L) p.archDebug = null
+  // Its own stems go, and so does anything of its neighbours that rests on it: a stem whose tip
+  // or blooms hang over this letter (the arch's bunch usually lands on the next letter). Children
+  // go with their parent.
+  const g = L.letter
+  const pad = em(C.WITHER_REST_PAD_EM)
+  const x0 = L.x0 + g.inkLeft - g.ox - pad
+  const x1 = L.x0 + g.inkRight - g.ox + pad
+  const over = (x: number) => g.ink && x >= x0 && x <= x1
+  const restsOn = (v: Vine) => over(v.pts[v.pts.length - 2]) || p.clusters.some((c) => c.vine === v.id && over(c.ax))
   const ids = new Set<number>()
   for (const v of p.vines)
-    if (!v.dead && v.dying === Infinity && (v.owner === L || ids.has(v.parent))) {
+    if (!v.dead && v.dying === Infinity && (v.owner === L || ids.has(v.parent) || restsOn(v))) {
       v.dying = age
       ids.add(v.id)
     }
+  // an arch goes as a whole: if its crest or a branch of it went, so does its climb (and the rest)
+  const archGone = p.vines.some((v) => ids.has(v.id) && (v.gesture === "arch" || v.gesture === "climb"))
+  if (archGone)
+    for (const v of p.vines)
+      if (!v.dead && v.dying === Infinity && (v.gesture === "arch" || v.gesture === "climb" || ids.has(v.parent))) {
+        v.dying = age
+        ids.add(v.id)
+      }
+  if (archGone) p.archDebug = null
   dirty(p)
   p.settledLen = -1
-  return p.clusters.filter((c) => ids.has(c.vine))
+  return { L, clusters: p.clusters.filter((c) => ids.has(c.vine)) }
+}
+
+// Too many withering at once: finish this letter's wither now.
+export function fastForward(p: Plant, L: PlantLetter, age: number) {
+  const done = age - C.REMOVE_MS - 1
+  L.dying = done
+  for (const v of p.vines) if (!v.dead && v.owner === L && v.dying !== Infinity) v.dying = done
 }
 
 // Withered letters are gone for good.
 export function finishWither(p: Plant, age: number) {
   let changed = false
   for (const v of p.vines)
-    if (!v.dead && age - v.dying > C.WITHER_TOTAL_MS) {
+    if (!v.dead && age - v.dying > C.REMOVE_MS) {
       v.dead = true
       changed = true
     }
-  p.gone = p.gone.filter((L) => age - L.dying <= C.WITHER_TOTAL_MS)
+  p.gone = p.gone.filter((L) => age - L.dying <= C.REMOVE_MS)
   if (changed) dirty(p)
 }
 
@@ -1239,17 +1293,79 @@ export function settle(p: Plant, now: number, topLimit = -Infinity) {
   const t = now - p.host0.birth
   const seed = hashSeed(p.seed, p.start, p.letters.length, SALT.settle)
   const rng = createRng(seed)
-  if (p.letters.length >= C.GROWTH_MIN_LETTERS && p.growth.length < C.GROWTH_MIN) {
+  if (p.letters.length >= C.GROWTH_MIN_LETTERS && p.growth.length < Math.max(C.GROWTH_MIN, growthCap(p.letters.length) - 1)) {
     // the letter farthest from the existing growth points
     const far = [...p.letters].sort((a, b) => dist(p, b) - dist(p, a))[0]
     if (far) addGrowth(p, far, t, hashSeed(seed, 1))
   }
   const trunks = alive(p).filter((v) => v.gesture === "trunk")
-  for (let i = 0; i < 4 && count(p, "drape") < p.drapeTarget && trunks.length; i++) {
+  for (let i = 0; i < 4 && count(p, "drape") < drapes(p) && trunks.length; i++) {
     const tr = trunks[Math.floor(rng.next() * trunks.length)]
     growDrape(p, tr.owner, tr, hashSeed(seed, 2, i), t)
   }
   if (!alive(p).some((v) => v.bloom === "hero")) growArch(p, t, hashSeed(seed, SALT.arch), topLimit)
+  // No bare letters. Stems behind the type barely show, so a letter counts as decorated only if a
+  // leaf, a bloom or a front stem is over it. Otherwise: a hug; else a twig (with its bloom or
+  // bud and leaves) off a stem passing over it; else a trunk of its own.
+  for (const L of p.letters) {
+    if (!bare(p, L)) continue
+    growHug(p, L, t, hashSeed(seed, 3, L.j))
+    if (bare(p, L)) {
+      const g = L.letter
+      const x0 = L.x0 + g.inkLeft - g.ox
+      const x1 = L.x0 + g.inkRight - g.ox
+      for (const v of alive(p)) {
+        if (v.gesture === "bunch" || v.gesture === "bridge" || v.tier === "twig") continue
+        const from = v.gesture === "trunk" ? C.TRUNK_BARE * v.length : 0.2 * v.length
+        const q = v.samples.find((q) => q.s >= from && q.s <= 0.92 * v.length && q.x >= x0 && q.x <= x1)
+        if (q && growTwig(p, v.owner, v, q.s, hashSeed(seed, 5, L.j, v.id), t)) break
+      }
+    }
+    if (bare(p, L)) addGrowth(p, L, t, hashSeed(seed, 4, L.j))
+  }
+  sprinkle(p, t, hashSeed(seed, 6))
   return true
+}
+
+// Small clusters along stretches of stem that have no bloom nearby, so long stems aren't bare.
+// They're extra: they don't use the word's bloom budget, but they do respect the calm rule.
+function sprinkle(p: Plant, t: number, seed: number) {
+  const rng = createRng(seed)
+  const live = alive(p)
+  const ids = new Set(live.map((v) => v.id))
+  const near = p.clusters.filter((c) => ids.has(c.vine)).map((c) => ({ x: c.ax, y: c.ay }))
+  const gap = em(C.SPRINKLE_GAP_EM)
+  for (const v of live) {
+    if (v.gesture === "bunch" || v.length < em(C.SPRINKLE_MIN_LENGTH_EM)) continue
+    const from = (v.gesture === "trunk" ? C.TRUNK_BARE : C.SPRINKLE_FROM) * v.length
+    let placed = 0
+    for (let s = from + rng.next() * em(0.05); s < 0.95 * v.length && placed < C.SPRINKLE_MAX_PER_STEM; s += em(0.04)) {
+      const q = sampleAt(v, s)
+      if (near.some((c) => Math.hypot(c.x - q.x, c.y - q.y) < gap)) continue
+      const c = cluster(p, rng, v, v.id, s, "small", Math.max(tipPasses(v, s) + C.CLUSTER_GAP_MS, t))
+      scaleCluster(c, em(rng.range(C.SPRINKLE_LENGTH_EM[0], C.SPRINKLE_LENGTH_EM[1])) / c.len)
+      const cells = clusterCells(c)
+      if (!calmOk(p, cells)) continue
+      p.clusters.push(c)
+      for (const k of cells) p.covered!.add(k)
+      v.cells.push(...cells)
+      near.push({ x: q.x, y: q.y })
+      placed++
+      s += gap * 0.6
+    }
+  }
+}
+
+// Nothing visible over this letter: no leaf, no bloom, no stem in front of the type.
+function bare(p: Plant, L: PlantLetter) {
+  const g = L.letter
+  if (!g.ink) return false
+  const x0 = L.x0 + g.inkLeft - g.ox - em(C.COVER_PAD_EM)
+  const x1 = L.x0 + g.inkRight - g.ox + em(C.COVER_PAD_EM)
+  const inX = (x: number) => x >= x0 && x <= x1
+  const live = alive(p)
+  const ids = new Set(live.map((v) => v.id))
+  if (p.clusters.some((c) => ids.has(c.vine) && inX(c.ax))) return false
+  return !live.some((v) => v.leaves.some((l) => inX(l.x)) || (v.layer === 1 && v.samples.some((q) => inX(q.x))))
 }
 const dist = (p: Plant, L: PlantLetter) => Math.min(99, ...p.growth.map((g) => Math.abs(g.owner.j - L.j)))

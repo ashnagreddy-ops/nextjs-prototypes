@@ -1,7 +1,7 @@
 import * as C from "./config"
 import { createRng, hashSeed } from "./rng"
 
-// Word-level rolls: a personality and a bract variety per word, keyed by the index of the
+// Word-level rolls: a personality and one or two bract varieties per word, keyed by the index of the
 // word's first glyph so letters typed later share them.
 
 const SALT = { style: 11, variety: 16 }
@@ -16,4 +16,14 @@ function pick<T extends { weight: number }>(table: Record<string, T>, r: number)
 }
 
 export const styleFor = (seed: number, wordStart: number): C.WordStyle => pick<C.WordStyle>(C.STYLES, createRng(hashSeed(seed, wordStart, SALT.style)).next())
-export const varietyFor = (seed: number, wordStart: number): C.Variety => pick<C.Variety>(C.VARIETIES, createRng(hashSeed(seed, wordStart, SALT.variety)).next())
+// A word's bract colours: a main variety, and sometimes a second, different one.
+// `avoid` is the previous word's colour: back-to-back words never share one.
+export function varietiesFor(seed: number, wordStart: number, avoid?: C.Variety): C.Variety[] {
+  const rng = createRng(hashSeed(seed, wordStart, SALT.variety))
+  let main = pick<C.Variety>(C.VARIETIES, rng.next())
+  const r = rng.next()
+  if (main === avoid) main = pick<C.Variety>(Object.fromEntries(Object.entries(C.VARIETIES).filter(([, v]) => v !== avoid)), r)
+  if (rng.next() >= C.SECOND_VARIETY_CHANCE) return [main]
+  const others = Object.fromEntries(Object.entries(C.VARIETIES).filter(([, v]) => v !== main))
+  return [main, pick<C.Variety>(others, rng.next())]
+}

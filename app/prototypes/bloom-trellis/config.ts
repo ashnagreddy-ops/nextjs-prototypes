@@ -27,6 +27,8 @@ export type VarietyName = keyof typeof VARIETIES
 // Mix within a word: 85% of bracts use the main colour, 15% a lighter tint of it.
 export const BRACT_TINT_CHANCE = 0.15
 export const BRACT_TINT_MIX = 0.32 // tint = main mixed this far toward LETTER
+export const SECOND_VARIETY_CHANCE = 0 // chance a word also gets a second, different variety (0: one colour per word)...
+export const SECOND_VARIETY_SHARE = 0.4 // ...used by this share of its clusters (each bunch stays one colour)
 
 // ---- Font -------------------------------------------------------------------
 export const FONT_FAMILY: "Playfair Display" | "Fraunces" = "Playfair Display"
@@ -39,14 +41,17 @@ export const REGENERATE_KEY = "R" // Shift+R: plain "r" is a typed letter
 export const LATTICE_PANEL_KEY = "T" // Shift+T: plain "t" is a typed letter
 export const LATTICE_PANEL_DEFAULT = false
 export const DEBUG_KEY = "V" // Shift+V: vine skeletons by hierarchy + rejection counts in the console
+export const BACKSPACE_DEBUG_KEY = "K" // Shift+K: log backspace latency and slow frames
+export const BACKSPACE_WATCH_MS = 1000 // watch this long after each backspace
+export const BACKSPACE_SLOW_FRAME_MS = 20
 export const TYPEABLE = /^[ \p{L}\p{N}.,;:!?'"&@#%*+=/()\-]$/u // space separates words
 export const MAX_GLYPHS = 80
 
 // One line for as long as possible: the font shrinks to keep the line at LINE_VW until it would
 // drop below ONE_LINE_MIN_VW, then the text wraps at spaces.
 export const LINE_VW = 0.85 // the line spans this much of the viewport width
-export const ONE_LINE_MIN_VW = 0.06 // smallest font size (x viewport width) before wrapping
-export const ROW_MAX_VW = 0.88 // once wrapping, rows fill up to this
+export const ONE_LINE_MIN_VW = 0.084 // smallest font size (x viewport width) before wrapping, measured from the reference screenshot
+export const ROW_MAX_VW = 0.92 // once at the minimum size, a row may fill up to this before wrapping
 export const BLOCK_MAX_VH = 0.9 // shrink the font if the rows don't fit vertically
 export const FONT_MAX_VH = 0.4 // short words stop growing at this height
 export const FONT_MIN_PX = 28
@@ -65,7 +70,7 @@ export const CARET_TOP_EM = 0.74 // above the baseline
 export const CARET_BOTTOM_EM = 0.06 // below the baseline
 export const CARET_GAP_EM = 0.08 // after the last glyph's advance
 export const CARET_BLINK_MS = 530 // on / off half period
-export const CARET_SOLID_MS = 600 // stays solid this long after a key
+export const CARET_SOLID_MS = 500 // stays solid this long after a key
 export const CARET_ALPHA = 0.85
 
 // ---- Trellis lattice --------------------------------------------------------
@@ -118,15 +123,21 @@ export const BOIL_WAVELENGTH_EM = 0.35
 export const BOIL_ROTATE_DEG = 1.6 // per-shape rotation jitter on leaves and bracts
 export const BOIL_BRACT = 0.5 // bracts boil at this x amplitude so they read as soft paper
 
-// ---- Wither (backspace) -----------------------------------------------------
-// The removed glyph freezes in place, drops its bracts, pulls its stems back and fades.
-export const WITHER_BURST_MS = 500 // all its bracts detach, staggered across this window
-export const WITHER_VINE_DELAY_MS = 150
-export const WITHER_VINE_MS = 650 // stems retract tip to root, ease-in
-export const WITHER_LETTER_DELAY_MS = 250
-export const WITHER_LETTER_MS = 600
-export const WITHER_SHRINK_EM = 0.05 // leaves shrink as the retracting tip comes within this
-export const WITHER_TOTAL_MS = 900
+// ---- Backspace, wither and layout easing --------------------------------------
+// Backspace marks the last live glyph dead on the keypress frame; that is the whole deletion.
+// Its letterform vanishes at once, and everything its plant owns (stems, leaves, thorns, blooms)
+// retracts toward the roots by kk = 1 - easeOutCubic(t / WITHER_MS).
+export const WITHER_MS = 260
+export const REMOVE_MS = 300 // a dead glyph is dropped this long after its death
+export const WITHER_MAX = 30 // withering glyphs at once; the oldest beyond this are fast-forwarded
+export const WITHER_SHRINK_EM = 0.05 // thorns, buds and blooms shrink as the retracting tip comes within this
+export const WITHER_BURST_MAX = 8 // bracts that fall from a deleted glyph's open clusters...
+export const WITHER_BURST_DELAY_MS = 120 // ...each after its own random delay up to this
+export const WITHER_BURST_LIFE_MS = 450 // ...and fade out as they fall instead of coming to rest
+export const PETAL_FADE_MS = 250 // petals lying on a deleted letter fade out this fast
+export const WITHER_REST_PAD_EM = 0.05 // a neighbour's stem whose tip or blooms hang over a deleted letter (+ this) goes with it
+export const LAYOUT_EASE_MS = 80 // live glyphs and the caret ease toward their targets, k = 1 - exp(-dt / this)
+export const EASE_DT_MAX_MS = 64 // frame dt is clamped to this for the easing
 
 // ---- Word personalities -----------------------------------------------------
 // Each word (a run of letters between spaces) rolls one personality; its letters share it.
@@ -173,7 +184,17 @@ export const CHILD_GAP_MIN_EM = 0.07 // irregular spacing between children on on
 export const CHILD_GAP_MAX_EM = 0.2
 
 // Growth points: 2-3 per word on ink near the baseline, spread across the word.
-export const GROWTH_MAX = 3
+export const GROWTH_MAX = 3 // per word, up to GROWTH_LETTERS_PER letters x 3; beyond that one per GROWTH_LETTERS_PER letters
+export const GROWTH_LETTERS_PER = 2.5
+export const DRAPE_EXTRA_LETTERS = 4 // one more drape per this many letters
+export const BLOOM_EXTRA_LETTERS = 3 // one more bloom site per this many letters
+export const COVER_PAD_EM = 0.02 // a letter counts as decorated if a leaf, bloom or front stem is over it (+ this)
+// Sprinkles: small clusters on stretches of stem with no bloom within SPRINKLE_GAP_EM (at settle).
+export const SPRINKLE_GAP_EM = 0.22
+export const SPRINKLE_MAX_PER_STEM = 3
+export const SPRINKLE_LENGTH_EM: readonly [number, number] = [0.045, 0.065] // bract length: between the twig singles and the drape bunches
+export const SPRINKLE_FROM = 0.3 // fraction of the stem (trunks use TRUNK_BARE)
+export const SPRINKLE_MIN_LENGTH_EM = 0.25 // stems shorter than this get none
 export const GROWTH_MIN = 2 // topped up at settle for words of GROWTH_MIN_LETTERS or more
 export const GROWTH_MIN_LETTERS = 2
 export const GROWTH_EVERY: readonly [number, number] = [2, 3] // letters between growth points
@@ -195,7 +216,7 @@ export const ARCH_ASCENDERS = "bdfhklt"
 export const ARCH_ROOT_INSET_PX = 2 // the root sits this far inside the baseline ink
 export const ARCH_CLIMB_TOP_EM = 0.03 // the climb hands over to the crest this far below the support's top
 export const ARCH_NEIGHBOUR_CLEAR_PX = 2 // the climb stops before it comes this close to a neighbour's ink...
-export const ARCH_CLIMB_MIN_EM = 0.15 // ...but must still climb at least this far
+export const ARCH_CLIMB_MIN_EM = 0.06 // ...but must still climb at least this far
 export const ARCH_CREST_CAP_EM = 0.25 // hard cap: nothing rises more than this above the support's top
 export const ARCH_TOP_MARGIN_VH = 0.08 // nothing of the arch within this of the viewport top (lowers the cap)
 export const ARCH_SPAN_MAX_EM = 1.6 // total horizontal span, bunch included

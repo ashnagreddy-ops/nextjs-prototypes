@@ -4,10 +4,12 @@ A bougainvillea take on Frost Flat. Typed letters sit tightly tracked in cream w
 
 ## How it works
 
-- **Layout.** The text stays on one line as long as possible. The font shrinks so the line spans `LINE_VW` (85%) of the viewport, capped by `FONT_MAX_VH` for short text. Only when that would drop below `ONE_LINE_MIN_VW` (6% of the viewport width) does it hold that size and wrap at spaces, each row filling up to `ROW_MAX_VW`. Tracking is `TRACKING_EM` (-0.01), and spaces get `WORD_SPACE_EM` extra so words read apart. Each word rolls a personality (`STYLES`: LUSH, CLIMBING or SPILLING) and a bract variety. Shift+R regrows, Shift+T toggles the lattice panel, and Shift+V toggles the debug view.
-- **Letters (`glyph.ts`).** Each character is rasterised once at `REF_FONT_PX`. It keeps its ink mask, ink bounds and an outside distance field, which hugs use. It is drawn as a cached sprite: `LETTER` fill with ±45° lattice lines stroked `source-atop`, in screen space, and static.
+- **Layout.** The text stays on one line as long as possible. The font shrinks so the line spans `LINE_VW` (85%) of the viewport, capped by `FONT_MAX_VH` for short text. Only when that would drop below `ONE_LINE_MIN_VW` (8.4% of the viewport width) does it hold that size and wrap at spaces, each row filling up to `ROW_MAX_VW`. Tracking is `TRACKING_EM` (-0.01), and spaces get `WORD_SPACE_EM` extra so words read apart. Each word rolls a personality (`STYLES`: LUSH, CLIMBING or SPILLING) and a bract variety. Shift+R regrows, Shift+T toggles the lattice panel, Shift+V toggles the debug view, Shift+K toggles the backspace diagnostics, and Enter clears everything. Live glyphs and the caret ease toward their layout targets with `k = 1 - exp(-dt / LAYOUT_EASE_MS)`.
+- **Letters (`glyph.ts`).** Each character is rasterised once at `REF_FONT_PX`. It keeps its ink mask, ink bounds and an outside distance field, which hugs use. Each frame the live letters are filled in `LETTER` on one layer canvas, the ±45° lattice is stroked `source-atop` over their box in screen space, and the layer is composited. Nothing is cached per position, so a keypress costs no re-render.
 - **One plant per word (`plant.ts`).** All geometry is in word coordinates at `REF_FONT_PX`: the origin is the word's first pen and the baseline is y = 0. The scene draws a plant from that pen, scaled to the layout size. Letters are added and removed at the end of the word as it is typed, and every stem is owned by a letter.
 - **Stems (`walker.ts`).** Every stem is a 60-step walk over u in [0, 1]. Its heading turns by `k(u) du`, where k is linear in u, so it changes sign at most once (`INFLECT_CHANCE`). Gravity adds a pull toward straight down of `g · u² · GRAVITY_K` per radian off vertical. Curvatures are total turns, so a shape doesn't depend on its length. The walk is joined with Catmull-Rom cubics. There is no noise or wiggle.
+- **Density.** Budgets grow with the word's length: growth points (one per `GROWTH_LETTERS_PER` letters, at least 3), drapes and bloom sites. A letter without a growth point of its own tries a hug. At settle, any letter with no visible leaf, bloom or front stem over it gets a hug. Failing that, it gets a blooming twig off a stem passing over it, and failing that, a trunk of its own.
+- **Sprinkles and colours.** At settle, stretches of stem with no bloom within `SPRINKLE_GAP_EM` get small clusters (`SPRINKLE_LENGTH_EM`, up to 3 per stem). These are extras outside the bloom budget, but they respect the calm rule. Each word is one colour, never the same as the word before it. `SECOND_VARIETY_CHANCE` (currently 0) can give a word a second variety, used by `SECOND_VARIETY_SHARE` of its clusters, with each bunch staying a single colour.
 - **Hierarchy.**
   - Each word places 2–3 **growth points** on ink near the baseline, spread across it (`GROWTH_EVERY`, topped up at settle). Each grows a **trunk**: a short climber with g 0.2, bare for its first 35%.
   - **Drapes** are branches (2–3 per word) that leave a trunk at 30–45° on the outer side of its curve and fall with g 0.8. The first two end in a medium bunch; the rest end in a twig.
@@ -42,13 +44,19 @@ These are the same systems as before, applied to plants.
 - **Sway:** each stem sways about its root on a spring chasing a wind lean plus gusts. A child composes onto its parent at the branch point. Clusters swing on a heavier pendulum spring that follows their stem 80ms late.
 - **Boil:** at 8fps, with half amplitude on bracts.
 - **Kicks:** typing kicks the current word's plant, and backspace makes it flinch.
-- **Wither:** on backspace, every stem owned by that letter, and everything branching from it, drops its bracts in a burst and retracts while the letter fades in its held slot. If that letter held the arch, a new arch grows at the next settle.
+- **Backspace and wither.** The handler is synchronous and is the whole deletion. It sets `dead = now` on the last live glyph, marks its own stems dying, and gives the live glyphs and the caret new targets that frame. Nothing is awaited or regenerated, and every keydown counts, auto-repeats included.
+  - **Ownership.** Each glyph owns its stems, and a child always belongs to the later of its own glyph and its parent's glyph, so nothing is orphaned. Deleting a glyph also takes any neighbour's stem whose tip or blooms hang over it (`WITHER_REST_PAD_EM`), with its children. If any part of the arch goes, the whole arch goes.
+  - **The letter.** Its letterform vanishes on the keypress frame and its glyph keeps its last position.
+  - **The plant.** It retracts by `kk = 1 - easeOutCubic(t / WITHER_MS)` (260ms), applied to stem lengths, leaf scale and bloom size together. Children are drawn back before the parent's tip passes their branch point, and the arch's climb and crest retract as one line.
+  - **Removal.** The glyph is dropped after `REMOVE_MS` (300ms). At most `WITHER_MAX` (30) glyphs wither at once; older ones are fast-forwarded.
+  - **Falling bracts.** Up to 8 bracts from the glyph's open clusters fall as independent particles, each after a random delay of up to 120ms, within the 40-particle cap. They fade out as they fall (`WITHER_BURST_LIFE_MS`) instead of coming to rest. Petals already lying on the deleted letter fade within `PETAL_FADE_MS`.
+  - **Settle and the arch.** A word only settles after `WORD_SETTLE_MS` with no key at all, so holding Backspace never triggers growth mid-deletion. If the deleted letter held the arch, a new arch grows at the next settle.
 
 ## Key files
 
 - `page.tsx` — loads Playfair Display (Fraunces fallback), mounts the scene
 - `config.ts` — every tunable
-- `scene.ts` — input, layout, words → plants, wither, falling-bract scheduling, layered draw, caret, debug log
+- `scene.ts` — input (synchronous delete), eased layout and caret, words → plants, bract bursts, letter layer, layered draw, debug and backspace diagnostics
 - `plant.ts` — growth points, gestures, hierarchy, bridges, clearance rules, bloom budget
 - `walker.ts` — curvature walk, Catmull-Rom smoothing, sampling
 - `render.ts` — springs/sway/boil/wither update, tapered stems, knots, thorns, leaves, clusters, debug skeletons

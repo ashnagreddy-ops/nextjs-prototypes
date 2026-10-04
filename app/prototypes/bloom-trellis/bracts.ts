@@ -48,7 +48,6 @@ export type Bract = {
   delay: number // ms after the cluster starts
   dropAt: number // glyph clock when it fell off (Infinity = attached)
   regrowAt: number // glyph clock when it springs back
-  pending: boolean // dropAt is scheduled but its falling copy hasn't been spawned yet
   pose: { x: number; y: number; angle: number; scale: number } | null // last drawn base pose, mask coords
 }
 
@@ -105,7 +104,6 @@ export function makeCluster(
       delay: j * C.BRACT_OPEN_STAGGER_MS,
       dropAt: Infinity,
       regrowAt: Infinity,
-      pending: false,
       pose: null,
     })
   }

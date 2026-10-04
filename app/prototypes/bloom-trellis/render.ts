@@ -1,6 +1,6 @@
 import * as C from "./config"
 import { drawBract, drawLeafShape } from "./bracts"
-import { clamp, easeInCubic, easeOutCubic, rad, spring, unit } from "./ease"
+import { clamp, easeOutCubic, rad, spring, unit } from "./ease"
 import { type Boil, IDENTITY, type Rigid, applyX, applyY, boilFor, boilTurn, boilX, boilY, compose, rotAbout, stepSpring, wind } from "./motion"
 import type { Plant, Vine } from "./plant"
 
@@ -18,6 +18,8 @@ type VineRT = {
   dp: Float32Array // deformed (swayed + boiled) points, up to the visible tip
   n: number // points in dp
   vis: number // visible length (growing, or retracting while withering)
+  grown: number // length it has grown to (before any wither)
+  kk: number // wither factor: 1 alive, easing to 0 over WITHER_MS once its glyph is dead
 }
 
 const rts = (p: Plant) => p.rt as VineRT[]
@@ -38,7 +40,13 @@ function delayedTh(rt: VineRT, t: number) {
   return h.length ? h[1] : rt.th
 }
 
-export const kick = (p: Plant, degPerS: number) => rts(p).forEach((rt) => rt && (rt.vel += rad(degPerS)))
+// Backspace diagnostics: has any withering stem of this plant started to draw shorter yet?
+export const shrinking = (p: Plant, owner: unknown) => p.vines.some((v, i) => v.owner === owner && (rts(p)[i]?.kk ?? 1) < 1)
+
+// Typing gusts and backspace flinches move live stems only.
+export const kick = (p: Plant, degPerS: number) => rts(p).forEach((rt, i) => rt && p.vines[i].dying === Infinity && (rt.vel += rad(degPerS)))
+
+const grownAt = (v: Vine, age: number) => easeOutCubic(unit(age, v.start, v.duration)) * v.length
 
 // Step the stem and cluster springs, then rebuild each stem's visible, deformed points.
 export function updatePlant(p: Plant, age: number, now: number, dt: number, screenX: number, scale: number) {
@@ -46,7 +54,7 @@ export function updatePlant(p: Plant, age: number, now: number, dt: number, scre
   boils.set(p, boil)
   const rt = rts(p)
   p.vines.forEach((v, i) => {
-    const r = (rt[i] ??= { th: 0, vel: 0, hist: [], base: IDENTITY, dp: new Float32Array(v.pts.length), n: 0, vis: 0 })
+    const r = (rt[i] ??= { th: 0, vel: 0, hist: [], base: IDENTITY, dp: new Float32Array(v.pts.length), n: 0, vis: 0, grown: 0, kk: 1 })
     r.n = 0
     if (v.dead) return
     ;[r.th, r.vel] = stepSpring(r.th, r.vel, wind(now, screenX + v.pts[0] * scale) * v.flex, C.STEM_SWAY, dt)
@@ -54,9 +62,29 @@ export function updatePlant(p: Plant, age: number, now: number, dt: number, scre
     if (r.hist.length > 24) r.hist.splice(0, 2)
     r.base = v.parent >= 0 ? xfAt(p, v.parent, v.parentS) : IDENTITY
 
-    const wr = age > v.dying ? easeInCubic(unit(age, v.dying + C.WITHER_VINE_DELAY_MS, C.WITHER_VINE_MS)) : 0
-    let vis = easeOutCubic(unit(age, v.start, v.duration)) * v.length * (1 - wr)
-    if (v.parent >= 0 && (rt[v.parent]?.vis ?? 0) < v.parentS) vis = 0
+    const grown = grownAt(v, age)
+    let vis = grown
+    let kk = 1
+    if (age > v.dying) {
+      // wither: retract toward the root by kk, from the keypress frame
+      kk = 1 - easeOutCubic(clamp((age - v.dying) / C.WITHER_MS, 0, 1))
+      const pr = v.parent >= 0 ? rt[v.parent] : null
+      const pv = v.parent >= 0 ? p.vines[v.parent] : null
+      const cont = cont_(p, i)
+      if (v.gesture === "arch" && pv?.gesture === "climb" && pr) {
+        // the arch's crest+spill and its climb retract as one line
+        vis = Math.max(0, kk * (pr.grown + grown) - pr.grown)
+      } else if (cont >= 0) {
+        vis = Math.min(grown, kk * (grown + grownAt(p.vines[cont], age)))
+      } else if (pr && pv && age > pv.dying) {
+        // children are drawn back before the parent's tip passes their branch point; a bunch at
+        // the tip shrinks in place a little faster
+        const atTip = v.parentS >= pr.grown - 1
+        vis = grown * (atTip ? kk * kk : Math.min(kk, Math.max(0, (pr.vis - v.parentS) / Math.max(1, pr.grown - v.parentS))))
+      } else vis = grown * kk
+    } else if (v.parent >= 0 && (rt[v.parent]?.vis ?? 0) < v.parentS) vis = 0
+    r.grown = grown
+    r.kk = kk
     r.vis = vis
     if (vis <= 0) return
 
@@ -97,6 +125,20 @@ export function updatePlant(p: Plant, age: number, now: number, dt: number, scre
     const stemA = delayedTh(r, now - C.CLUSTER_SWING_DELAY_MS) * bend(p.vines[c.vine], c.s)
     ;[c.phi, c.phiV] = stepSpring(c.phi, c.phiV, -(C.CLUSTER_FOLLOW * stemA + C.CLUSTER_WIND * wg), C.CLUSTER_SWAY, dt)
   }
+}
+
+// The arch's climb hands over to a continuation stem (its crest+spill); -1 for any other stem.
+const conts = new WeakMap<Plant, Map<number, number>>()
+function cont_(p: Plant, i: number) {
+  if (p.vines[i].gesture !== "climb") return -1
+  let m = conts.get(p)
+  if (!m) conts.set(p, (m = new Map()))
+  let c = m.get(i)
+  if (c === undefined) {
+    c = p.vines.findIndex((o) => o.parent === i && o.gesture === "arch")
+    if (c >= 0) m.set(i, c)
+  }
+  return c
 }
 
 const hashPlant = (p: Plant) => (p.seed ^ (p.start * 2654435761)) >>> 0
@@ -202,7 +244,7 @@ export function drawLeaves(ctx: CanvasRenderingContext2D, p: Plant, age: number,
   for (const v of p.vines) {
     if (v.dead || v.layer !== layer) continue
     v.leaves.forEach((l, li) => {
-      const sc = spring(age - l.start, C.LEAF_SPRING) * witherScale(p, age, v, l.s)
+      const sc = spring(age - l.start, C.LEAF_SPRING) * witherScale(p, age, v, l.s) * rts(p)[v.id].kk
       if (sc <= 0.001) return
       const xf = xfAt(p, v.id, l.s)
       ctx.setTransform(base)
@@ -227,7 +269,7 @@ export function drawClusters(ctx: CanvasRenderingContext2D, p: Plant, age: numbe
     const v = p.vines[c.vine]
     const r = rt[c.vine]
     if (!r || v.dead || age < c.start) continue
-    const ws = witherScale(p, age, v, c.s)
+    const ws = witherScale(p, age, v, c.s) * r.kk // blooms shrink with the wither, together with the stems
     if (c.s > r.vis + 0.5) continue
     const xf = xfAt(p, c.vine, c.s)
     const ax = applyX(xf, c.ax, c.ay) + boilX(boil, c.ax, c.ay)
@@ -252,6 +294,7 @@ export function drawClusters(ctx: CanvasRenderingContext2D, p: Plant, age: numbe
       let sc: number
       if (age >= br.dropAt) sc = age >= br.regrowAt ? spring(age - br.regrowAt, C.BLOOM_SPRING) : 0
       else sc = spring(age - c.start - br.delay, C.BLOOM_SPRING)
+      sc *= ws
       if (sc <= 0.001) {
         br.pose = null
         return

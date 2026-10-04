@@ -1,10 +1,9 @@
 import * as C from "./config"
-import { rgba } from "./color"
 import { fontFor } from "./font"
 import { buildMask, distanceField } from "./mask"
 
-// A typed character's shape, built once at REF_FONT_PX (independent of the layout size). Plants
-// read its ink; the letter itself is drawn as a cached sprite with the lattice cut into it.
+// A typed character's shape, built once at REF_FONT_PX (independent of the layout size), for
+// plants to read its ink. The scene draws the letters themselves.
 export type Letter = {
   char: string
   ox: number // pen origin (baseline) inside the mask box
@@ -17,12 +16,11 @@ export type Letter = {
   inkBottom: number
   inkLeft: number
   inkRight: number
-  sprite: { key: string; canvas: HTMLCanvasElement } | null
 }
 
 export function buildLetter(char: string): Letter {
   const fs = C.REF_FONT_PX
-  const blank = { char, ox: 0, oy: 0, w: 1, h: 1, ink: null, dOut: null, inkTop: 0, inkBottom: 0, inkLeft: 0, inkRight: 0, sprite: null }
+  const blank = { char, ox: 0, oy: 0, w: 1, h: 1, ink: null, dOut: null, inkTop: 0, inkBottom: 0, inkLeft: 0, inkRight: 0 }
   if (!char.trim()) return blank
   const measure = document.createElement("canvas").getContext("2d")!
   measure.font = fontFor(fs)
@@ -52,7 +50,6 @@ export function buildLetter(char: string): Letter {
     inkBottom: m.bottom,
     inkLeft: m.left,
     inkRight: m.right,
-    sprite: null,
   }
 }
 
@@ -90,40 +87,4 @@ export function latticeLines(ctx: CanvasRenderingContext2D, x0: number, y0: numb
     ctx.lineTo(u + h, h)
   }
   ctx.stroke()
-}
-
-// The letter in LETTER with the lattice clipped to it, cached as a sprite per size/position.
-// Drawn with an identity (device px) transform.
-export function drawLetter(ctx: CanvasRenderingContext2D, b: Letter, pen: { x: number; y: number }, fs: number, dpr: number, alpha: number) {
-  if (!b.ink || alpha <= 0) return
-  const s = fs / C.REF_FONT_PX
-  const x0 = pen.x - b.ox * s
-  const y0 = pen.y - b.oy * s
-  // snap the sprite to device pixels so it stays crisp
-  const dx = Math.round(x0 * dpr)
-  const dy = Math.round(y0 * dpr)
-  const key = `${fs}|${dx}|${dy}|${dpr}`
-  if (b.sprite?.key !== key) {
-    const cw = Math.ceil(b.w * s * dpr) + 2
-    const ch = Math.ceil(b.h * s * dpr) + 2
-    const canvas = b.sprite?.canvas ?? document.createElement("canvas")
-    canvas.width = cw
-    canvas.height = ch
-    const sc = canvas.getContext("2d")!
-    sc.setTransform(dpr * s, 0, 0, dpr * s, 0, 0)
-    sc.font = fontFor(C.REF_FONT_PX)
-    sc.textAlign = "left"
-    sc.textBaseline = "alphabetic"
-    sc.fillStyle = C.LETTER
-    sc.fillText(b.char, b.ox, b.oy)
-    sc.globalCompositeOperation = "source-atop"
-    sc.setTransform(dpr, 0, 0, dpr, 0, 0)
-    sc.strokeStyle = rgba(C.LATTICE_LINE, C.LATTICE_LINE_ALPHA)
-    sc.lineWidth = C.LATTICE_WIDTH_PX
-    latticeLines(sc, dx / dpr, dy / dpr, cw / dpr, ch / dpr, C.LATTICE_SPACING_EM * fs)
-    b.sprite = { key, canvas }
-  }
-  ctx.globalAlpha = alpha
-  ctx.drawImage(b.sprite.canvas, dx, dy)
-  ctx.globalAlpha = 1
 }
