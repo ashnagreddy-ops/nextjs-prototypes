@@ -1,5 +1,5 @@
 import * as C from "./config"
-import { mix, rgba } from "./color"
+import { mix } from "./color"
 import { rad } from "./ease"
 import type { Rng } from "./rng"
 
@@ -79,7 +79,7 @@ const LENGTHS = {
   hero: [C.HERO_LENGTH_MIN_EM, C.HERO_LENGTH_MAX_EM],
 } as const
 
-export const bractColors = (v: C.Variety) => ({ main: v.main, tint: mix(v.main, C.LETTER, C.BRACT_TINT_MIX), vein: v.vein })
+export const bractColors = (v: C.Variety) => ({ main: v.main, tint: mix(v.main, C.BRACT_TINT_TOWARD, C.BRACT_TINT_MIX), vein: v.vein })
 
 export function makeCluster(
   rng: Rng,
@@ -157,10 +157,10 @@ export function drawBract(ctx: CanvasRenderingContext2D, b: Pick<Bract, "shape" 
 }
 
 // Leaf at the current transform: origin at the stem, pointing along +x, unit = len.
-export function drawLeafShape(ctx: CanvasRenderingContext2D, len: number, color: string, veinPx: number) {
+export function drawLeafShape(ctx: CanvasRenderingContext2D, len: number, color: string, veinPx: number, vein: string) {
   ctx.fillStyle = color
   ctx.fill(leafShape())
-  ctx.strokeStyle = rgba(C.LEAF_VEIN, C.LEAF_VEIN_ALPHA)
+  ctx.strokeStyle = vein
   ctx.lineWidth = veinPx / len
   ctx.lineCap = "round"
   ctx.beginPath()

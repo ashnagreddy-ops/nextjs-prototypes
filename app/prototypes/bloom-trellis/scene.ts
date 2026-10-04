@@ -1,10 +1,11 @@
 import * as C from "./config"
-import type { Bract, Cluster } from "./bracts"
+import { type Bract, type Cluster, blob, drawBract, drawLeafShape } from "./bracts"
 import { rgba } from "./color"
 import { clamp } from "./ease"
 import { type Faller, clearPetals, drawFallers, spawnFaller } from "./falling"
 import { fontFor } from "./font"
 import { type Letter, buildLetter, latticeLines } from "./glyph"
+import { LEAF_VEIN_ALPHA, PALETTES, active, setPalette, syncDom, tickPalette } from "./palettes"
 import { type Plant, type PlantLetter, addLetter, createPlant, fastForward, finishWither, removeLetter, settle } from "./plant"
 import { drawClusters, drawDebug, drawLeaves, drawStems, drawThorns, kick, shrinking, updatePlant } from "./render"
 import { type Layout, advanceEm, layoutText, stepEm } from "./text-layout"
@@ -54,6 +55,7 @@ export function createScene(canvas: HTMLCanvasElement, opts: { onFirstType: () =
   let nextFall = performance.now() + range(C.FALL_EVERY_MIN_MS, C.FALL_EVERY_MAX_MS)
   // Backspace diagnostics (BACKSPACE_DEBUG_KEY): keydown -> first frame its plant draws shorter,
   // and any slow frame in the next second split into layout / geometry / render.
+  let paletteDebug = false
   let bsDebug = false
   let bsWatch: { t0: number; p: Plant; owner: unknown; seen: boolean; until: number } | null = null
 
@@ -223,7 +225,7 @@ export function createScene(canvas: HTMLCanvasElement, opts: { onFirstType: () =
     lctx.font = fontFor(fs)
     lctx.textAlign = "left"
     lctx.textBaseline = "alphabetic"
-    lctx.fillStyle = C.LETTER
+    lctx.fillStyle = active.letter
     let x0 = Infinity
     let y0 = Infinity
     let x1 = -Infinity
@@ -237,7 +239,7 @@ export function createScene(canvas: HTMLCanvasElement, opts: { onFirstType: () =
     }
     lctx.globalCompositeOperation = "source-atop"
     lctx.setTransform(dpr, 0, 0, dpr, x0 * dpr, y0 * dpr)
-    lctx.strokeStyle = rgba(C.LATTICE_LINE, C.LATTICE_LINE_ALPHA)
+    lctx.strokeStyle = active.lattice
     lctx.lineWidth = C.LATTICE_WIDTH_PX
     latticeLines(lctx, x0, y0, x1 - x0, y1 - y0, C.LATTICE_SPACING_EM * fs)
     lctx.globalCompositeOperation = "source-over"
@@ -245,12 +247,51 @@ export function createScene(canvas: HTMLCanvasElement, opts: { onFirstType: () =
     ctx.drawImage(lc, 0, 0)
   }
 
+  // Shift+P: each palette's letter, vine, leaf and every bract colour over its own bg.
+  let sampleBract: Path2D | null = null
+  const drawPaletteSamples = () => {
+    sampleBract ??= blob(C.BRACT_POINTS, C.BRACT_WIDTH_RATIO, C.BRACT_WIDEST_AT, C.BRACT_ROUNDNESS)
+    const w = 150
+    const h = 120
+    const cols = Math.max(1, Math.floor((vw - 16) / (w + 8)))
+    PALETTES.forEach((p, i) => {
+      const x = 16 + (i % cols) * (w + 8)
+      const y = 16 + Math.floor(i / cols) * (h + 8)
+      ctx.setTransform(dpr, 0, 0, dpr, x * dpr, y * dpr)
+      ctx.fillStyle = p.bg
+      ctx.fillRect(0, 0, w, h)
+      ctx.fillStyle = p.letter
+      ctx.font = fontFor(44)
+      ctx.textBaseline = "alphabetic"
+      ctx.fillText("Aa", 10, 52)
+      ctx.font = "11px sans-serif"
+      ctx.fillText(p.name, 10, h - 10)
+      ctx.strokeStyle = p.vine
+      ctx.lineWidth = 3
+      ctx.lineCap = "round"
+      ctx.beginPath()
+      ctx.moveTo(78, 60)
+      ctx.quadraticCurveTo(100, 10, 140, 30)
+      ctx.stroke()
+      const vein = rgba(p.bg, LEAF_VEIN_ALPHA)
+      ctx.setTransform(dpr * 30, 0, 0, dpr * 30, (x + 78) * dpr, (y + 78) * dpr)
+      ctx.rotate(-0.5)
+      drawLeafShape(ctx, 30, C.LEAF, C.LEAF_VEIN_WIDTH_PX, vein)
+      Object.values(C.VARIETIES).forEach((v, j) => {
+        ctx.setTransform(dpr * 18, 0, 0, dpr * 18, (x + 14 + j * 22) * dpr, (y + 92) * dpr)
+        ctx.rotate(-Math.PI / 2)
+        drawBract(ctx, { shape: sampleBract!, color: v.main, vein: v.vein, sideVeins: true }, 18, C.BRACT_VEIN_WIDTH_PX)
+      })
+    })
+  }
+
   const draw = (now: number) => {
     ctx.setTransform(1, 0, 0, 1, 0, 0)
-    ctx.clearRect(0, 0, canvas.width, canvas.height)
+    ctx.fillStyle = active.bg
+    ctx.fillRect(0, 0, canvas.width, canvas.height)
     if (panel) {
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
-      ctx.strokeStyle = rgba(C.LATTICE_PANEL_COLOR, C.LATTICE_PANEL_ALPHA)
+      ctx.strokeStyle = active.panel
       ctx.lineWidth = C.LATTICE_WIDTH_PX
       latticeLines(ctx, 0, 0, vw, vh, C.LATTICE_SPACING_EM * layout.fs)
     }
@@ -275,6 +316,7 @@ export function createScene(canvas: HTMLCanvasElement, opts: { onFirstType: () =
     each((p, age) => drawClusters(ctx, p, age))
     drawFallers(ctx, fallers, layout.fs, dpr, now)
     if (debug) each((p, _age, s) => drawDebug(ctx, p, s))
+    if (paletteDebug) drawPaletteSamples()
 
     // caret: solid for CARET_SOLID_MS after a key, then blinking
     const sinceKey = now - lastKey
@@ -282,7 +324,7 @@ export function createScene(canvas: HTMLCanvasElement, opts: { onFirstType: () =
       const fs = layout.fs
       const w = Math.max(1.5, (C.CARET_WIDTH_PX * fs) / C.REF_FONT_PX)
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
-      ctx.fillStyle = rgba(C.LETTER, C.CARET_ALPHA)
+      ctx.fillStyle = active.letterAlpha(C.CARET_ALPHA)
       ctx.fillRect(caret.x - w / 2, caret.y - C.CARET_TOP_EM * fs, w, (C.CARET_TOP_EM + C.CARET_BOTTOM_EM) * fs)
     }
   }
@@ -292,6 +334,8 @@ export function createScene(canvas: HTMLCanvasElement, opts: { onFirstType: () =
     const dt = Math.min(dtMs / 1000, C.SWAY_MAX_DT)
     lastNow = now
     const tA = performance.now()
+    // palette crossfade: colours are read at draw time, so nothing regrows
+    if (tickPalette(now)) syncDom()
     if (sizeDirty) {
       resize()
       sizeDirty = false
@@ -371,7 +415,13 @@ export function createScene(canvas: HTMLCanvasElement, opts: { onFirstType: () =
     if (e.ctrlKey || e.metaKey || e.altKey) return
     const now = performance.now()
     // toggles ignore auto-repeat; typing and Backspace handle every keydown, repeats included
-    if (e.key === C.REGENERATE_KEY || e.key === C.LATTICE_PANEL_KEY || e.key === C.DEBUG_KEY || e.key === C.BACKSPACE_DEBUG_KEY) {
+    if (e.key === "Tab") {
+      // Tab / Shift+Tab: next / previous palette
+      e.preventDefault()
+      setPalette(active.index + (e.shiftKey ? -1 : 1))
+      return
+    }
+    if (e.key === C.REGENERATE_KEY || e.key === C.LATTICE_PANEL_KEY || e.key === C.DEBUG_KEY || e.key === C.BACKSPACE_DEBUG_KEY || e.key === C.PALETTE_DEBUG_KEY) {
       e.preventDefault()
       if (e.repeat) return
       if (e.key === C.REGENERATE_KEY) {
@@ -383,6 +433,7 @@ export function createScene(canvas: HTMLCanvasElement, opts: { onFirstType: () =
         glyphs.forEach((g, i) => (g.birth = now + i * 40))
         relayout()
       } else if (e.key === C.LATTICE_PANEL_KEY) panel = !panel
+      else if (e.key === C.PALETTE_DEBUG_KEY) paletteDebug = !paletteDebug
       else if (e.key === C.DEBUG_KEY) {
         debug = !debug
         if (debug) logRejections()

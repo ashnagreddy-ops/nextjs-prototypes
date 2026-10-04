@@ -4,7 +4,12 @@ A bougainvillea take on Frost Flat. Typed letters sit tightly tracked in cream w
 
 ## How it works
 
-- **Layout.** The text stays on one line as long as possible. The font shrinks so the line spans `LINE_VW` (85%) of the viewport, capped by `FONT_MAX_VH` for short text. Only when that would drop below `ONE_LINE_MIN_VW` (8.4% of the viewport width) does it hold that size and wrap at spaces, each row filling up to `ROW_MAX_VW`. Tracking is `TRACKING_EM` (-0.01), and spaces get `WORD_SPACE_EM` extra so words read apart. Each word rolls a personality (`STYLES`: LUSH, CLIMBING or SPILLING) and a bract variety. Shift+R regrows, Shift+T toggles the lattice panel, Shift+V toggles the debug view, Shift+K toggles the backspace diagnostics, and Enter clears everything. Live glyphs and the caret ease toward their layout targets with `k = 1 - exp(-dt / LAYOUT_EASE_MS)`.
+- **Layout.** The text stays on one line as long as possible. The font shrinks so the line spans `LINE_VW` (85%) of the viewport, capped by `FONT_MAX_VH` for short text. Only when that would drop below `ONE_LINE_MIN_VW` (8.4% of the viewport width) does it hold that size and wrap at spaces, each row filling up to `ROW_MAX_VW`. Tracking is `TRACKING_EM` (-0.01), and spaces get `WORD_SPACE_EM` extra so words read apart. Each word rolls a personality (`STYLES`: LUSH, CLIMBING or SPILLING) and a bract variety. Tab / Shift+Tab cycle palettes, Shift+R regrows (keeping the palette), Shift+T toggles the lattice panel, Shift+P shows every palette's colour samples, Shift+V toggles the debug view, Shift+K toggles the backspace diagnostics, and Enter clears everything. Live glyphs and the caret ease toward their layout targets with `k = 1 - exp(-dt / LAYOUT_EASE_MS)`.
+- **Palettes (`palettes.ts`).** There are 8 palettes, each with a background, letter and vine colour; flowers and leaves never change. Everything draws from one live `active` colour set at draw time, so switching never regenerates anything. The garden keeps growing and swaying while colours crossfade with a linear RGB blend over 350ms.
+  - **Derived colours.** The lattice is the letter mixed 18% toward the background, drawn opaque, which matches the original look. Leaf veins are the background at 0.5 alpha. The caret, hint text, picker, body background and `theme-color` follow the palette.
+  - **Picker.** A pill of swatches at the bottom. Swatches never take focus, because pointerdown is prevented and keys are read on `window`.
+  - **Persistence.** The choice is saved in `localStorage` under `bloom-palette`. `page.tsx` is a server component whose inline boot script sets `--bloom-bg` / `--bloom-letter` before the first paint, then renders the client `bloom-trellis.tsx`.
+  - **Contrast check.** In dev, switching to a palette warns if letter/bg contrast is below 7:1 or vine/bg below 2:1.
 - **Letters (`glyph.ts`).** Each character is rasterised once at `REF_FONT_PX`. It keeps its ink mask, ink bounds and an outside distance field, which hugs use. Each frame the live letters are filled in `LETTER` on one layer canvas, the ±45° lattice is stroked `source-atop` over their box in screen space, and the layer is composited. Nothing is cached per position, so a keypress costs no re-render.
 - **One plant per word (`plant.ts`).** All geometry is in word coordinates at `REF_FONT_PX`: the origin is the word's first pen and the baseline is y = 0. The scene draws a plant from that pen, scaled to the layout size. Letters are added and removed at the end of the word as it is typed, and every stem is owned by a letter.
 - **Stems (`walker.ts`).** Every stem is a 60-step walk over u in [0, 1]. Its heading turns by `k(u) du`, where k is linear in u, so it changes sign at most once (`INFLECT_CHANCE`). Gravity adds a pull toward straight down of `g · u² · GRAVITY_K` per radian off vertical. Curvatures are total turns, so a shape doesn't depend on its length. The walk is joined with Catmull-Rom cubics. There is no noise or wiggle.
@@ -54,7 +59,9 @@ These are the same systems as before, applied to plants.
 
 ## Key files
 
-- `page.tsx` — loads Playfair Display (Fraunces fallback), mounts the scene
+- `page.tsx` — server wrapper: the palette boot script, then `bloom-trellis.tsx`
+- `bloom-trellis.tsx` — loads Playfair Display (Fraunces fallback), mounts the scene, palette picker
+- `palettes.ts` — palette data, derived colours, crossfade, persistence, contrast check
 - `config.ts` — every tunable
 - `scene.ts` — input (synchronous delete), eased layout and caret, words → plants, bract bursts, letter layer, layered draw, debug and backspace diagnostics
 - `plant.ts` — growth points, gestures, hierarchy, bridges, clearance rules, bloom budget

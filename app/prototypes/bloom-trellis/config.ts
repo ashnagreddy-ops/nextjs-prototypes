@@ -1,18 +1,14 @@
 // All tunables for Bloom Trellis. Lengths ending in _EM are fractions of the glyph's font size;
 // _PX are css pixels at REF_FONT_PX and scale with the font; times are ms on each glyph's own
-// clock (0 = its keypress). Canvas colours are literals because canvas can't read CSS tokens.
+// clock (0 = its keypress). Canvas colours are literals because canvas can't read CSS tokens;
+// the palette (bg / letter / vine) lives in palettes.ts.
 
-// ---- Palette (flat fills only: no gradients, glows or shadows) --------------
-export const BACKGROUND = "#12281d"
-export const LETTER = "#f6efe0"
-export const LATTICE_LINE = BACKGROUND
-export const LATTICE_LINE_ALPHA = 0.18
-export const VINE = "#c9a27a" // woody tan: stems, stalks and thorns
+// ---- Colours (flat fills only: no gradients, glows or shadows) --------------
+// Background, letter, vine, lattice and leaf-vein colours come from the active palette
+// (palettes.ts). Flowers and leaves below never change with it.
 export const LEAF = "#4f9a5b"
 export const LEAF_DARK = "#357a45"
 export const LEAF_DARK_CHANCE = 0.45 // each leaf picks one of the two greens
-export const LEAF_VEIN = BACKGROUND
-export const LEAF_VEIN_ALPHA = 0.5
 export const FLOWER_CENTER = "#fff6e0"
 
 // Bract varieties: each word rolls one, and its letters share it.
@@ -26,7 +22,8 @@ export const VARIETIES = {
 export type VarietyName = keyof typeof VARIETIES
 // Mix within a word: 85% of bracts use the main colour, 15% a lighter tint of it.
 export const BRACT_TINT_CHANCE = 0.15
-export const BRACT_TINT_MIX = 0.32 // tint = main mixed this far toward LETTER
+export const BRACT_TINT_TOWARD = "#f6efe0" // tints mix toward this cream (fixed: flowers ignore the palette)
+export const BRACT_TINT_MIX = 0.32 // tint = main mixed this far toward BRACT_TINT_TOWARD
 export const SECOND_VARIETY_CHANCE = 0 // chance a word also gets a second, different variety (0: one colour per word)...
 export const SECOND_VARIETY_SHARE = 0.4 // ...used by this share of its clusters (each bunch stays one colour)
 
@@ -42,6 +39,7 @@ export const LATTICE_PANEL_KEY = "T" // Shift+T: plain "t" is a typed letter
 export const LATTICE_PANEL_DEFAULT = false
 export const DEBUG_KEY = "V" // Shift+V: vine skeletons by hierarchy + rejection counts in the console
 export const BACKSPACE_DEBUG_KEY = "K" // Shift+K: log backspace latency and slow frames
+export const PALETTE_DEBUG_KEY = "P" // Shift+P: every palette's letter, vine, leaf and bract samples over its bg
 export const BACKSPACE_WATCH_MS = 1000 // watch this long after each backspace
 export const BACKSPACE_SLOW_FRAME_MS = 20
 export const TYPEABLE = /^[ \p{L}\p{N}.,;:!?'"&@#%*+=/()\-]$/u // space separates words
@@ -77,8 +75,6 @@ export const CARET_ALPHA = 0.85
 // Diamond lattice clipped to each glyph, in screen space so it lines up with the panel. Static.
 export const LATTICE_SPACING_EM = 0.1 // x layout font size
 export const LATTICE_WIDTH_PX = 1.5 // css px, not scaled
-export const LATTICE_PANEL_COLOR = LETTER // LATTICE_LINE is the background colour, so the panel uses the letter colour
-export const LATTICE_PANEL_ALPHA = 0.07
 
 // ---- Timeline -----------------------------------------------------------------
 // A letter appears instantly; its stems start after VINE_DELAY and grow at a steady pace (ease-out).

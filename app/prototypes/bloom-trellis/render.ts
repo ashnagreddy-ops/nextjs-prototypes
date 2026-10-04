@@ -2,6 +2,7 @@ import * as C from "./config"
 import { drawBract, drawLeafShape } from "./bracts"
 import { clamp, easeOutCubic, rad, spring, unit } from "./ease"
 import { type Boil, IDENTITY, type Rigid, applyX, applyY, boilFor, boilTurn, boilX, boilY, compose, rotAbout, stepSpring, wind } from "./motion"
+import { active } from "./palettes"
 import type { Plant, Vine } from "./plant"
 
 // Motion and drawing for a plant, in word coordinates (REF_FONT_PX). The scene sets the
@@ -156,7 +157,7 @@ export function drawStems(ctx: CanvasRenderingContext2D, p: Plant, age: number, 
   const rt = rts(p)
   const minHalf = C.STEM_MIN_PX / 2 / scale
   const boil = boils.get(p)
-  ctx.fillStyle = C.VINE
+  ctx.fillStyle = active.vine
   for (const v of p.vines) {
     if (v.dead || v.layer !== layer) continue
     const r = rt[v.id]
@@ -209,7 +210,7 @@ export function drawStems(ctx: CanvasRenderingContext2D, p: Plant, age: number, 
 export function drawThorns(ctx: CanvasRenderingContext2D, p: Plant, age: number, layer: 0 | 1) {
   const boil = boils.get(p)
   if (!boil) return
-  ctx.fillStyle = C.VINE
+  ctx.fillStyle = active.vine
   for (const v of p.vines) {
     if (v.dead || v.layer !== layer) continue
     for (const t of v.thorns) {
@@ -251,7 +252,7 @@ export function drawLeaves(ctx: CanvasRenderingContext2D, p: Plant, age: number,
       ctx.translate(applyX(xf, l.x, l.y) + boilX(boil, l.x, l.y), applyY(xf, l.x, l.y) + boilY(boil, l.x, l.y))
       ctx.rotate(l.angle + xf.a + boilTurn(boil, v.id * 64 + li))
       ctx.scale(l.len * sc, l.len * sc)
-      drawLeafShape(ctx, l.len * sc, l.color, veinW)
+      drawLeafShape(ctx, l.len * sc, l.color, veinW, active.leafVein)
     })
   }
   ctx.setTransform(base)
@@ -283,7 +284,7 @@ export function drawClusters(ctx: CanvasRenderingContext2D, p: Plant, age: numbe
     const cy = ay + Math.sin(hang) * stalk + k * boilY(boil, c.ax + c.len, c.ay - c.len)
 
     ctx.setTransform(base)
-    ctx.strokeStyle = C.VINE
+    ctx.strokeStyle = active.vine
     ctx.lineWidth = Math.min(c.stalkW, v.width)
     ctx.beginPath()
     ctx.moveTo(ax, ay)
@@ -352,7 +353,7 @@ export function drawDebug(ctx: CanvasRenderingContext2D, p: Plant, scale: number
     ctx.stroke()
   }
   ctx.fillStyle = C.DEBUG_COLORS.trunk
-  ctx.strokeStyle = C.LETTER
+  ctx.strokeStyle = active.letter
   const a = p.archDebug
   for (const g of a ? [...p.growth, a.root] : p.growth) {
     ctx.beginPath()
