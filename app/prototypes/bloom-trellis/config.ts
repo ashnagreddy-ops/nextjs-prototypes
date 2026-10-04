@@ -42,13 +42,16 @@ export const DEBUG_KEY = "V" // Shift+V: vine skeletons by hierarchy + rejection
 export const TYPEABLE = /^[ \p{L}\p{N}.,;:!?'"&@#%*+=/()\-]$/u // space separates words
 export const MAX_GLYPHS = 80
 
-export const MAX_LETTERS_PER_ROW = 10 // spaces included; rows wrap at spaces
-export const LINE_VW = 0.75 // the first row is sized to span this much of the viewport width
-export const ROW_MAX_VW = 0.8 // wrap when a row would exceed this
+// One line for as long as possible: the font shrinks to keep the line at LINE_VW until it would
+// drop below ONE_LINE_MIN_VW, then the text wraps at spaces.
+export const LINE_VW = 0.85 // the line spans this much of the viewport width
+export const ONE_LINE_MIN_VW = 0.06 // smallest font size (x viewport width) before wrapping
+export const ROW_MAX_VW = 0.88 // once wrapping, rows fill up to this
 export const BLOCK_MAX_VH = 0.9 // shrink the font if the rows don't fit vertically
 export const FONT_MAX_VH = 0.4 // short words stop growing at this height
 export const FONT_MIN_PX = 28
 export const TRACKING_EM = -0.01 // letter spacing, x font size
+export const WORD_SPACE_EM = 0.12 // extra width added to each space
 export const LINE_HEIGHT_EM = 2.1 // room for the arch above and hanging bracts below
 export const BASELINE_IN_LINE = 0.6 // baseline position within a line box
 
@@ -183,14 +186,54 @@ export const TRUNK_LENGTH_EM: readonly [number, number] = [0.5, 0.85]
 export const TRUNK_CURVE: readonly [number, number] = [0.15, 0.6] // total turn, either way
 export const TRUNK_BARE = 0.35 // no leaves, blooms or children on the first part of a trunk
 
-// ARCH: one per word, from a growth point, crests 0.5-0.8 x fs above the type and hangs the hero bunch.
-export const ARCH_GRAVITY = 0.4
-export const ARCH_GRAVITY_FROM = 0.66 // gravity only takes over in the last third
-export const ARCH_LEAN_RAD: readonly [number, number] = [0.05, 0.25] // off vertical, toward the arch direction
-export const ARCH_CURVE: readonly [number, number] = [0.9, 1.2] // constant curvature, total turn
-export const ARCH_RISE_EM: readonly [number, number] = [0.5, 0.8] // crest above the word's highest ink
-export const ARCH_LENGTH_MIN_EM = 0.9
-export const ARCH_LENGTH_MAX_EM = 2.4
+// ARCH: one per word, one continuous vine in three phases on a SUPPORT glyph (an ascender
+// nearest the word's centre, else the tallest letter):
+// CLIMB hugs the support's outline up from its baseline ink, in front; CREST rises at most
+// ARCH_CREST_CAP_EM above the support's top and bends over once; SPILL heads down the far side so
+// the bunch rests against a neighbouring letter. Crest and spill are behind the type.
+export const ARCH_ASCENDERS = "bdfhklt"
+export const ARCH_ROOT_INSET_PX = 2 // the root sits this far inside the baseline ink
+export const ARCH_CLIMB_TOP_EM = 0.03 // the climb hands over to the crest this far below the support's top
+export const ARCH_NEIGHBOUR_CLEAR_PX = 2 // the climb stops before it comes this close to a neighbour's ink...
+export const ARCH_CLIMB_MIN_EM = 0.15 // ...but must still climb at least this far
+export const ARCH_CREST_CAP_EM = 0.25 // hard cap: nothing rises more than this above the support's top
+export const ARCH_TOP_MARGIN_VH = 0.08 // nothing of the arch within this of the viewport top (lowers the cap)
+export const ARCH_SPAN_MAX_EM = 1.6 // total horizontal span, bunch included
+export const ARCH_TURN: readonly [number, number] = [0.88, 1] // x the turn from the climb's heading to straight down
+export const ARCH_CREST_PEAK = 0.3 // where the bend is sharpest along crest+spill (< 0.5: steeper on the climb side)
+export const ARCH_CURVE_NOISE = 0.15 // +/- low-frequency noise on the curvature
+export const ARCH_NOISE_CELLS = 2.5 // noise features along crest+spill
+export const ARCH_LENGTH_EM: readonly [number, number] = [0.7, 1.2] // the bend (up, over, turning down), before the cap
+export const ARCH_SPILL_EXTRA_EM: readonly [number, number] = [0.3, 0.7] // then the spill drops on, before trimming
+export const ARCH_SHORTEN = 0.2 // each retry pair shortens the spill by this fraction
+export const ARCH_SPILL_MIN_EM = 0.12 // the spill runs at least this far past the crest
+export const ARCH_LAND_X_EM = 0.2 // the main bunch's centre must be within this (horizontal)...
+export const ARCH_LAND_Y_EM = 0.3 // ...and this (vertical) of some ink; ideally the neighbour's top
+export const ARCH_TRIES = 6 // alternating sides, then shorter; then fall back to a drape
+export const ARCH_ROOT_WIDTH = 1 // x BASE_WIDTH at the root...
+export const ARCH_TIP_WIDTH = 0.55 // ...tapering to this at the bunch
+// Leaves: from ARCH_LEAF_FROM of the length, alternating sides (outward only on the climb),
+// larger near the crest, gathered in pairs near the bunch.
+export const ARCH_LEAF_FROM = 0.2
+export const ARCH_LEAF_SPACING_EM = 0.12
+export const ARCH_LEAF_JITTER = 0.25 // +/- fraction of the spacing
+export const ARCH_LEAF_CREST_BOOST = 0.45 // up to this much larger at the crest
+export const ARCH_LEAF_CREST_RANGE_EM = 0.25
+export const ARCH_LEAF_BUNCH_EM = 0.15 // pairs within this of the bunch...
+export const ARCH_LEAF_BUNCH_SPACING_EM = 0.05 // ...this close together
+// Side twigs on the crest / spill, one always on the spill.
+export const ARCH_TWIGS: readonly [number, number] = [2, 3]
+export const ARCH_TWIG_LENGTH_EM: readonly [number, number] = [0.1, 0.2]
+export const ARCH_TWIG_BLOOM_CHANCE = 0.5 // ends in a small cluster (while the budget lasts), else a leaf pair
+export const ARCH_TWIG_GAP_EM = 0.1 // between twigs and from the second bunch
+// Main bunch at the spill's tip, and a smaller one partway down the spill.
+export const ARCH_BUNCH: readonly [number, number] = [4, 6]
+export const ARCH_BUNCH_STEM_EM: readonly [number, number] = [0.08, 0.14] // short drooping stalk
+export const ARCH_BUNCH_MAX_ACROSS_EM = 0.5
+export const ARCH_SECOND_AT = 0.4 // fraction of the way down the spill
+export const ARCH_SECOND_BUNCH: readonly [number, number] = [2, 3]
+export const ARCH_SECOND_STEM_EM: readonly [number, number] = [0.04, 0.08]
+export const ARCH_SECOND_STALK_EM = 0.035
 
 // DRAPE: a branch that leaves a trunk outward and falls, ending in a bunch or a twig.
 export const DRAPES: readonly [number, number] = [2, 3] // per word
@@ -246,8 +289,9 @@ export const REACH_UP_EM = 1.65 // above the baseline
 export const REACH_DOWN_EM = 0.75 // below the baseline
 
 // ---- Sway flex (x the stem spring's target) ------------------------------------
-export const FLEX: Record<"trunk" | "arch" | "drape" | "twig" | "hug" | "bridge" | "bunch", number> = {
+export const FLEX: Record<"trunk" | "climb" | "arch" | "drape" | "twig" | "hug" | "bridge" | "bunch", number> = {
   trunk: 0.8,
+  climb: 0.15,
   arch: 0.45,
   drape: 1.2,
   twig: 1.3,
@@ -257,7 +301,7 @@ export const FLEX: Record<"trunk" | "arch" | "drape" | "twig" | "hug" | "bridge"
 }
 
 // ---- Bunches ------------------------------------------------------------------
-// Drooping sub-stem with 4-7 clusters on fanned stalks: the hero at the arch tip, medium ones at drape ends.
+// Drooping sub-stem with 4-7 clusters on fanned stalks: medium ones at drape ends, and the hero on a fallback drape.
 export const HERO_STEM_EM: readonly [number, number] = [0.24, 0.34]
 export const MEDIUM_STEM_EM: readonly [number, number] = [0.14, 0.22]
 export const BUNCH_FROM = 0.15 // clusters spread from this fraction of the sub-stem to its tip
@@ -297,6 +341,7 @@ export const THORN_GAP_EM = 0.08 // from each other and from branch points
 export const DEBUG_COLORS: Record<Tier, string> = { trunk: "#ff3b30", branch: "#ff9500", twig: "#ffd60a" }
 export const DEBUG_LINE_PX = 1.5
 export const DEBUG_DOT_PX = 4
+export const DEBUG_ARCH_COLOR = "#5ac8fa" // support box, crest cap, bunch-to-ink line
 
 // ---- Bract clusters ---------------------------------------------------------
 export const BRACT_POINTS = 20 // outline samples

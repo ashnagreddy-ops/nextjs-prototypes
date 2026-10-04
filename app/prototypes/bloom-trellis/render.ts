@@ -105,7 +105,7 @@ const hashPlant = (p: Plant) => (p.seed ^ (p.start * 2654435761)) >>> 0
 const witherScale = (p: Plant, age: number, v: Vine, s: number) =>
   age < v.dying ? 1 : clamp((rts(p)[v.id].vis - s) / (C.WITHER_SHRINK_EM * R), 0, 1)
 
-const halfWidth = (v: Vine, s: number, minHalf: number) => Math.max(minHalf, (v.width / 2) * (1 - (1 - C.TAPER_TIP) * clamp(s / v.length, 0, 1)))
+const halfWidth = (v: Vine, s: number, minHalf: number) => Math.max(minHalf, (v.width + (v.tipWidth - v.width) * clamp(s / v.length, 0, 1)) / 2)
 
 // ---- Layers ---------------------------------------------------------------------------
 
@@ -150,7 +150,8 @@ export function drawStems(ctx: CanvasRenderingContext2D, p: Plant, age: number, 
     // knot on the parent where this stem branches off
     if (v.parent >= 0 && boil) {
       const pv = p.vines[v.parent]
-      if (pv.layer !== layer || v.gesture === "bunch") continue
+      // no knot where the arch's crest carries on from its climb, or under a bunch at a tip
+      if (pv.layer !== layer || v.gesture === "arch" || (v.gesture === "bunch" && v.parentS >= pv.length - 1)) continue
       const k = Math.min(1, spring(age - v.start, C.LEAF_SPRING)) * witherScale(p, age, v, 0)
       if (k <= 0.01) continue
       const xf = xfAt(p, v.parent, v.parentS)
@@ -309,10 +310,32 @@ export function drawDebug(ctx: CanvasRenderingContext2D, p: Plant, scale: number
   }
   ctx.fillStyle = C.DEBUG_COLORS.trunk
   ctx.strokeStyle = C.LETTER
-  for (const g of p.growth) {
+  const a = p.archDebug
+  for (const g of a ? [...p.growth, a.root] : p.growth) {
     ctx.beginPath()
     ctx.arc(g.x, g.y, C.DEBUG_DOT_PX / scale, 0, Math.PI * 2)
     ctx.fill()
     ctx.stroke()
+  }
+  if (!a) return
+  // the arch: support glyph's ink box, crest cap line, main bunch to its nearest ink
+  const [x0, y0, x1, y1] = a.box
+  ctx.strokeStyle = C.DEBUG_ARCH_COLOR
+  ctx.setLineDash([4 / scale, 3 / scale])
+  ctx.strokeRect(x0, y0, x1 - x0, y1 - y0)
+  ctx.beginPath()
+  ctx.moveTo(x0 - R * C.ARCH_SPAN_MAX_EM * 0.5, a.capY)
+  ctx.lineTo(x1 + R * C.ARCH_SPAN_MAX_EM * 0.5, a.capY)
+  ctx.stroke()
+  ctx.setLineDash([])
+  ctx.beginPath()
+  ctx.moveTo(a.bunch.x, a.bunch.y)
+  ctx.lineTo(a.ink.x, a.ink.y)
+  ctx.stroke()
+  ctx.fillStyle = C.DEBUG_ARCH_COLOR
+  for (const q of [a.bunch, a.ink]) {
+    ctx.beginPath()
+    ctx.arc(q.x, q.y, (C.DEBUG_DOT_PX * 0.6) / scale, 0, Math.PI * 2)
+    ctx.fill()
   }
 }

@@ -24,13 +24,17 @@ export function advanceEm(ch: string) {
 
 const isSpace = (ch: string) => !ch.trim()
 
+// Pen advance to the next character in em: the glyph's advance plus tracking, and extra room
+// after a space so words read apart at the tight tracking.
+export const stepEm = (ch: string) => advanceEm(ch) + C.TRACKING_EM + (isSpace(ch) ? C.WORD_SPACE_EM : 0)
+
 // Wrap at spaces so words stay whole; a word too long for any row is split by letters.
 // A space that ends a row stays on it (trailing), so rows never start with one.
 function wrap(chars: string[], fs: number, maxRowW: number) {
-  const cell = (i: number) => (advanceEm(chars[i]) + C.TRACKING_EM) * fs
+  const cell = (i: number) => stepEm(chars[i]) * fs
   const rows: number[][] = [[]]
   let rowW = 0
-  const fits = (n: number, w: number) => rows[rows.length - 1].length + n <= C.MAX_LETTERS_PER_ROW && rowW + w <= maxRowW
+  const fits = (w: number) => rowW + w <= maxRowW
   const put = (i: number) => {
     rows[rows.length - 1].push(i)
     rowW += cell(i)
@@ -48,9 +52,9 @@ function wrap(chars: string[], fs: number, maxRowW: number) {
     while (j < chars.length && !isSpace(chars[j])) j++
     const word = Array.from({ length: j - i }, (_, k) => i + k)
     const w = word.reduce((sum, k) => sum + cell(k), 0)
-    if (!fits(word.length, w) && rows[rows.length - 1].length) newRow()
+    if (!fits(w) && rows[rows.length - 1].length) newRow()
     for (const k of word) {
-      if (!fits(1, cell(k)) && rows[rows.length - 1].length) newRow()
+      if (!fits(cell(k)) && rows[rows.length - 1].length) newRow()
       put(k)
     }
     i = j
@@ -58,16 +62,18 @@ function wrap(chars: string[], fs: number, maxRowW: number) {
   return rows
 }
 
-// Centered rows. The font is sized so the first row (up to MAX_LETTERS_PER_ROW characters)
-// spans LINE_VW of the viewport, capped by FONT_MAX_VH; longer text wraps at spaces, and the
-// size shrinks again only if the rows overflow vertically.
+// Centered rows. The text stays on one line as long as it can: the font shrinks so the line
+// spans LINE_VW of the viewport (capped by FONT_MAX_VH for short text). Once that would take it
+// below the one-line minimum, it holds that size and wraps at spaces, each row filling up to
+// ROW_MAX_VW; it shrinks again only if the rows overflow vertically.
 export function layoutText(chars: string[], vw: number, vh: number): Layout {
   const maxRowW = C.ROW_MAX_VW * vw
-  let first = chars.slice(0, C.MAX_LETTERS_PER_ROW)
-  while (first.length > 1 && isSpace(first[first.length - 1])) first = first.slice(0, -1)
-  const rowEm = first.reduce((s, ch) => s + advanceEm(ch) + C.TRACKING_EM, 0) - C.TRACKING_EM
-  let fs = Math.min(C.FONT_MAX_VH * vh, rowEm > 0 ? (C.LINE_VW * vw) / rowEm : Infinity)
-  fs = Math.max(C.FONT_MIN_PX, Math.floor(fs))
+  let line = chars
+  while (line.length > 1 && isSpace(line[line.length - 1])) line = line.slice(0, -1)
+  const lineEm = line.reduce((s, ch) => s + stepEm(ch), 0) - C.TRACKING_EM
+  const minFs = Math.max(C.FONT_MIN_PX, C.ONE_LINE_MIN_VW * vw)
+  let fs = Math.min(C.FONT_MAX_VH * vh, lineEm > 0 ? (C.LINE_VW * vw) / lineEm : Infinity)
+  fs = Math.floor(Math.max(minFs, fs))
   let rows = wrap(chars, fs, maxRowW)
   while (rows.length * C.LINE_HEIGHT_EM * fs > C.BLOCK_MAX_VH * vh && fs > C.FONT_MIN_PX) {
     fs = Math.max(C.FONT_MIN_PX, Math.floor(fs * 0.92))
@@ -81,12 +87,12 @@ export function layoutText(chars: string[], vw: number, vh: number): Layout {
     // trailing spaces and the trailing gap aren't part of the visible row width
     let last = row.length
     while (last > 1 && isSpace(chars[row[last - 1]])) last--
-    const width = row.slice(0, last).reduce((s, i) => s + (advanceEm(chars[i]) + C.TRACKING_EM) * fs, 0) - C.TRACKING_EM * fs
+    const width = row.slice(0, last).reduce((s, i) => s + stepEm(chars[i]) * fs, 0) - C.TRACKING_EM * fs
     let x = (vw - width) / 2
     const y = blockTop + (r + C.BASELINE_IN_LINE) * lineH
     for (const i of row) {
       pens[i] = { x, y }
-      x += (advanceEm(chars[i]) + C.TRACKING_EM) * fs
+      x += stepEm(chars[i]) * fs
     }
   })
   return { fs, pens }

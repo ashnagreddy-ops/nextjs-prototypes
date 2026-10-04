@@ -15,6 +15,7 @@ export type Curve = {
   k1: number // at u = 1
   g: number // gravity strength
   gFrom?: number // gravity only acts past this u (ramped in), default 0
+  k?: (u: number) => number // a custom curvature profile instead of k0..k1 (the arch's crest)
 }
 
 export type Spiral = { turns: number; r0: number; tighten: number }
@@ -28,7 +29,7 @@ export function walk(x: number, y: number, heading: number, L: number, c: Curve,
   let lastTurn = 0
   for (let i = 0; i < C.WALK_STEPS; i++) {
     const u = (i + 0.5) * du
-    const k = c.k0 + (c.k1 - c.k0) * u
+    const k = c.k ? c.k(u) : c.k0 + (c.k1 - c.k0) * u
     const ramp = c.gFrom ? clamp((u - c.gFrom) / Math.max(0.05, (1 - c.gFrom) / 2), 0, 1) : 1
     const pull = c.g * u * u * ramp * C.GRAVITY_K * wrapAngle(DOWN - th)
     lastTurn = k + pull

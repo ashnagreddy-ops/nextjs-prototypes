@@ -6,7 +6,7 @@ import { type Faller, drawFallers, spawnFaller } from "./falling"
 import { type Letter, buildLetter, drawLetter, latticeLines } from "./glyph"
 import { type Plant, addLetter, createPlant, finishWither, removeLetter, settle } from "./plant"
 import { drawClusters, drawDebug, drawLeaves, drawStems, drawThorns, kick, updatePlant } from "./render"
-import { type Layout, advanceEm, layoutText } from "./text-layout"
+import { type Layout, advanceEm, layoutText, stepEm } from "./text-layout"
 import { isSpace, styleFor, varietyFor } from "./words"
 
 // One typed character. Its letter shape is built once; the word it belongs to owns a plant
@@ -117,10 +117,15 @@ export function createScene(canvas: HTMLCanvasElement, opts: { onFirstType: () =
         .join(""),
       stems: p.vines.filter((v) => !v.dead).length,
       ...p.rejected,
+      arch: p.archRejected,
     }))
     for (const r of rows)
       console.log(
-        `[bloom-trellis] "${r.word}" stems ${r.stems} · rejected: reach ${r.reach}, self ${r.self}, parallel ${r.parallel}, front ${r.front}, calm ${r.calm} · skipped ${r.skipped}`
+        `[bloom-trellis] "${r.word}" stems ${r.stems} · rejected: reach ${r.reach}, self ${r.self}, parallel ${r.parallel}, front ${r.front}, calm ${r.calm} · skipped ${r.skipped}` +
+          ` · arch candidates rejected: ${Object.entries(r.arch)
+            .filter(([, n]) => n)
+            .map(([k, n]) => `${k} ${n}`)
+            .join(", ") || "none"}`
       )
   }
 
@@ -167,7 +172,7 @@ export function createScene(canvas: HTMLCanvasElement, opts: { onFirstType: () =
     if (sinceKey < C.CARET_SOLID_MS || Math.floor((sinceKey - C.CARET_SOLID_MS) / C.CARET_BLINK_MS) % 2 === 1) {
       const fs = layout.fs
       const last = glyphs[glyphs.length - 1]
-      const x = last?.pen ? last.pen.x + (advanceEm(last.char) + C.CARET_GAP_EM) * fs : vw / 2
+      const x = last?.pen ? last.pen.x + (stepEm(last.char) - C.TRACKING_EM + C.CARET_GAP_EM) * fs : vw / 2
       const y = last?.pen ? last.pen.y : vh / 2 + 0.3 * fs
       const w = Math.max(1.5, (C.CARET_WIDTH_PX * fs) / C.REF_FONT_PX)
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
@@ -216,7 +221,12 @@ export function createScene(canvas: HTMLCanvasElement, opts: { onFirstType: () =
         addLetter(p, g, g.built)
       }
       // settled: followed by a space, or no new letter for a while
-      if ((end < glyphs.length || now - glyphs[end - 1].birth > C.WORD_SETTLE_MS) && settle(p, now) && debug) logRejections()
+      if (end < glyphs.length || now - glyphs[end - 1].birth > C.WORD_SETTLE_MS) {
+        // the arch keeps ARCH_TOP_MARGIN_VH clear of the viewport's top edge
+        const f = frameOf(p)
+        const topLimit = f ? (C.ARCH_TOP_MARGIN_VH * vh - f.y) / f.s : -Infinity
+        if (settle(p, now, topLimit) && debug) logRejections()
+      }
       i = end
     }
 
