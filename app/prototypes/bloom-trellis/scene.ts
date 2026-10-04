@@ -3,12 +3,13 @@ import { type Bract, type Cluster, blob, drawBract, drawLeafShape } from "./brac
 import { rgba } from "./color"
 import { clamp } from "./ease"
 import { type Faller, clearPetals, drawFallers, spawnFaller } from "./falling"
-import { fontFor } from "./font"
+import { fontFamily, fontFor, fontWeight } from "./font"
 import { type Letter, buildLetter, latticeLines } from "./glyph"
 import { LEAF_VEIN_ALPHA, PALETTES, active, setPalette, syncDom, tickPalette } from "./palettes"
 import { type Plant, type PlantLetter, addLetter, createPlant, fastForward, finishWither, removeLetter, settle } from "./plant"
 import { drawClusters, drawDebug, drawLeaves, drawStems, drawThorns, kick, shrinking, updatePlant } from "./render"
 import { type Layout, advanceEm, layoutText, stepEm } from "./text-layout"
+import { SvgRecorder, embeddedFontCss } from "./svg-export"
 import { isSpace, styleFor, varietiesFor } from "./words"
 
 // One typed character. Its letter shape is built once; the word it belongs to owns a plant
@@ -85,7 +86,8 @@ export function createScene(canvas: HTMLCanvasElement, opts: { onFirstType: () =
     })
     const last = act[act.length - 1]
     const fs = layout.fs
-    caretTarget = last?.target ? { x: last.target.x + (stepEm(last.char) - C.TRACKING_EM + C.CARET_GAP_EM) * fs, y: last.target.y } : { x: vw / 2, y: vh / 2 + 0.3 * fs }
+    // with nothing typed, the caret waits where the first letter will go
+    caretTarget = last?.target ? { x: last.target.x + (stepEm(last.char) - C.TRACKING_EM + C.CARET_GAP_EM) * fs, y: last.target.y } : { x: vw / 2, y: layoutText(["x"], vw, vh).pens[0].y }
     caret ??= { ...caretTarget }
   }
 
@@ -142,9 +144,7 @@ export function createScene(canvas: HTMLCanvasElement, opts: { onFirstType: () =
   // A deleted glyph's open clusters shed up to WITHER_BURST_MAX bracts as independent particles,
   // each after its own short delay. The wither never waits for them.
   const burst = (p: Plant, clusters: Cluster[], age: number, now: number) => {
-    const pool = clusters
-      .filter((c) => age >= c.start + C.BRACT_OPEN_STAGGER_MS * 2 + 300)
-      .flatMap((c) => c.bracts.filter((br) => br.pose && (br.dropAt === Infinity || age >= br.regrowAt)))
+    const pool = clusters.filter((c) => age >= c.start + C.BRACT_OPEN_STAGGER_MS * 2 + 300).flatMap((c) => c.bracts.filter((br) => br.pose && (br.dropAt === Infinity || age >= br.regrowAt)))
     for (let i = pool.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1))
       ;[pool[i], pool[j]] = [pool[j], pool[i]]
@@ -204,10 +204,12 @@ export function createScene(canvas: HTMLCanvasElement, opts: { onFirstType: () =
     for (const r of rows)
       console.log(
         `[bloom-trellis] "${r.word}" stems ${r.stems} · rejected: reach ${r.reach}, self ${r.self}, parallel ${r.parallel}, front ${r.front}, calm ${r.calm} · skipped ${r.skipped}` +
-          ` · arch candidates rejected: ${Object.entries(r.arch)
-            .filter(([, n]) => n)
-            .map(([k, n]) => `${k} ${n}`)
-            .join(", ") || "none"}`
+          ` · arch candidates rejected: ${
+            Object.entries(r.arch)
+              .filter(([, n]) => n)
+              .map(([k, n]) => `${k} ${n}`)
+              .join(", ") || "none"
+          }`
       )
   }
 
@@ -215,36 +217,63 @@ export function createScene(canvas: HTMLCanvasElement, opts: { onFirstType: () =
 
   // Live letters in LETTER on their own layer, the lattice stroked source-atop over their box
   // (screen space, so it lines up with the panel), then composited. Dead letters aren't drawn.
-  const drawLetters = () => {
-    lctx.setTransform(1, 0, 0, 1, 0, 0)
-    lctx.clearRect(0, 0, lc.width, lc.height)
+  // The live letters and the box the lattice is stroked over (screen space).
+  const letterBox = () => {
     const act = live().filter((g) => g.built?.ink && g.pen)
-    if (!act.length) return
     const fs = layout.fs
-    lctx.setTransform(dpr, 0, 0, dpr, 0, 0)
-    lctx.font = fontFor(fs)
-    lctx.textAlign = "left"
-    lctx.textBaseline = "alphabetic"
-    lctx.fillStyle = active.letter
     let x0 = Infinity
     let y0 = Infinity
     let x1 = -Infinity
     let y1 = -Infinity
     for (const g of act) {
-      lctx.fillText(g.char, g.pen!.x, g.pen!.y)
       x0 = Math.min(x0, g.pen!.x - 0.3 * fs)
       x1 = Math.max(x1, g.pen!.x + (advanceEm(g.char) + 0.3) * fs)
       y0 = Math.min(y0, g.pen!.y - 1.1 * fs)
       y1 = Math.max(y1, g.pen!.y + 0.5 * fs)
     }
-    lctx.globalCompositeOperation = "source-atop"
-    lctx.setTransform(dpr, 0, 0, dpr, x0 * dpr, y0 * dpr)
-    lctx.strokeStyle = active.lattice
-    lctx.lineWidth = C.LATTICE_WIDTH_PX
-    latticeLines(lctx, x0, y0, x1 - x0, y1 - y0, C.LATTICE_SPACING_EM * fs)
-    lctx.globalCompositeOperation = "source-over"
-    ctx.setTransform(1, 0, 0, 1, 0, 0)
-    ctx.drawImage(lc, 0, 0)
+    return { act, fs, x0, y0, x1, y1 }
+  }
+
+  const drawLetters = (c: CanvasRenderingContext2D) => {
+    lctx.setTransform(1, 0, 0, 1, 0, 0)
+    lctx.clearRect(0, 0, lc.width, lc.height)
+    const { act, fs, x0, y0, x1, y1 } = letterBox()
+    if (!act.length) return
+    lctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+    lctx.font = fontFor(fs)
+    lctx.textAlign = "left"
+    lctx.textBaseline = "alphabetic"
+    lctx.fillStyle = active.letter
+    for (const g of act) lctx.fillText(g.char, g.pen!.x, g.pen!.y)
+    if (C.LETTER_LATTICE) {
+      lctx.globalCompositeOperation = "source-atop"
+      lctx.setTransform(dpr, 0, 0, dpr, x0 * dpr, y0 * dpr)
+      lctx.strokeStyle = active.lattice
+      lctx.lineWidth = C.LATTICE_WIDTH_PX
+      latticeLines(lctx, x0, y0, x1 - x0, y1 - y0, C.LATTICE_SPACING_EM * fs)
+      lctx.globalCompositeOperation = "source-over"
+    }
+    c.setTransform(1, 0, 0, 1, 0, 0)
+    c.drawImage(lc, 0, 0)
+  }
+
+  // SVG: the letters as text in the page's face, and the lattice clipped to them.
+  const svgLetters = (rec: SvgRecorder) => {
+    const { act, fs, x0, y0, x1, y1 } = letterBox()
+    if (!act.length) return
+    // clipPath may only hold shapes and text (no <g>), so each <text> carries the font itself
+    const font = `font-family='${fontFamily().replace(/"/g, "")}' font-weight="${fontWeight()}" font-size="${fs * dpr}"`
+    const texts = act.map((g) => rec.text(g.pen!.x * dpr, g.pen!.y * dpr, g.char, font)).join("")
+    rec.raw(`<defs><clipPath id="bloom-ink">${texts}</clipPath></defs>`)
+    rec.raw(`<g fill="${active.letter}">${texts}</g>`)
+    if (!C.LETTER_LATTICE) return
+    rec.group(`clip-path="url(#bloom-ink)"`)
+    rec.setTransform(dpr, 0, 0, dpr, x0 * dpr, y0 * dpr)
+    rec.strokeStyle = active.lattice
+    rec.lineWidth = C.LATTICE_WIDTH_PX
+    rec.lineCap = "butt"
+    latticeLines(rec as unknown as CanvasRenderingContext2D, x0, y0, x1 - x0, y1 - y0, C.LATTICE_SPACING_EM * fs)
+    rec.endGroup()
   }
 
   // Shift+P: each palette's letter, vine, leaf and every bract colour over its own bg.
@@ -285,48 +314,108 @@ export function createScene(canvas: HTMLCanvasElement, opts: { onFirstType: () =
     })
   }
 
-  const draw = (now: number) => {
-    ctx.setTransform(1, 0, 0, 1, 0, 0)
-    ctx.fillStyle = active.bg
-    ctx.fillRect(0, 0, canvas.width, canvas.height)
+  // mode "screen" draws everything; "png" and "svg" leave out the caret and debug overlays.
+  // An SVG export passes an SvgRecorder as the context, so the same drawing code writes vectors.
+  const draw = (now: number, c: CanvasRenderingContext2D = ctx, mode: "screen" | "png" | "svg" = "screen") => {
+    c.setTransform(1, 0, 0, 1, 0, 0)
+    c.fillStyle = active.bg
+    c.fillRect(0, 0, canvas.width, canvas.height)
     if (panel) {
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
-      ctx.strokeStyle = active.panel
-      ctx.lineWidth = C.LATTICE_WIDTH_PX
-      latticeLines(ctx, 0, 0, vw, vh, C.LATTICE_SPACING_EM * layout.fs)
+      c.setTransform(dpr, 0, 0, dpr, 0, 0)
+      c.strokeStyle = active.panel
+      c.lineWidth = C.LATTICE_WIDTH_PX
+      latticeLines(c, 0, 0, vw, vh, C.LATTICE_SPACING_EM * layout.fs)
     }
     const ps = allPlants()
     const each = (fn: (p: Plant, age: number, s: number) => void) => {
       for (const p of ps) {
         const f = frameOf(p)
         if (!f) continue
-        ctx.setTransform(dpr * f.s, 0, 0, dpr * f.s, f.x * dpr, f.y * dpr)
+        c.setTransform(dpr * f.s, 0, 0, dpr * f.s, f.x * dpr, f.y * dpr)
         fn(p, now - p.host0.birth, f.s)
       }
     }
     // layer 0: behind the type
-    each((p, age, s) => drawStems(ctx, p, age, 0, s))
-    each((p, age) => drawThorns(ctx, p, age, 0))
-    each((p, age) => drawLeaves(ctx, p, age, 0))
-    drawLetters()
+    each((p, age, s) => drawStems(c, p, age, 0, s))
+    each((p, age) => drawThorns(c, p, age, 0))
+    each((p, age) => drawLeaves(c, p, age, 0))
+    if (mode === "svg") svgLetters(c as unknown as SvgRecorder)
+    else drawLetters(c)
     // layer 1: in front, then every bloom
-    each((p, age, s) => drawStems(ctx, p, age, 1, s))
-    each((p, age) => drawThorns(ctx, p, age, 1))
-    each((p, age) => drawLeaves(ctx, p, age, 1))
-    each((p, age) => drawClusters(ctx, p, age))
-    drawFallers(ctx, fallers, layout.fs, dpr, now)
-    if (debug) each((p, _age, s) => drawDebug(ctx, p, s))
+    each((p, age, s) => drawStems(c, p, age, 1, s))
+    each((p, age) => drawThorns(c, p, age, 1))
+    each((p, age) => drawLeaves(c, p, age, 1))
+    each((p, age) => drawClusters(c, p, age))
+    drawFallers(c, fallers, layout.fs, dpr, now)
+    if (mode !== "screen") return
+    if (debug) each((p, _age, s) => drawDebug(c, p, s))
     if (paletteDebug) drawPaletteSamples()
 
     // caret: solid for CARET_SOLID_MS after a key, then blinking
-    const sinceKey = now - lastKey
+    // (before any key it just blinks, from page load)
+    const sinceKey = now - (Number.isFinite(lastKey) ? lastKey : 0)
     if (caret && (sinceKey < C.CARET_SOLID_MS || Math.floor((sinceKey - C.CARET_SOLID_MS) / C.CARET_BLINK_MS) % 2 === 1)) {
       const fs = layout.fs
       const w = Math.max(1.5, (C.CARET_WIDTH_PX * fs) / C.REF_FONT_PX)
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
-      ctx.fillStyle = active.letterAlpha(C.CARET_ALPHA)
-      ctx.fillRect(caret.x - w / 2, caret.y - C.CARET_TOP_EM * fs, w, (C.CARET_TOP_EM + C.CARET_BOTTOM_EM) * fs)
+      c.setTransform(dpr, 0, 0, dpr, 0, 0)
+      c.fillStyle = active.letterAlpha(C.CARET_ALPHA)
+      c.fillRect(caret.x - w / 2, caret.y - C.CARET_TOP_EM * fs, w, (C.CARET_TOP_EM + C.CARET_BOTTOM_EM) * fs)
     }
+  }
+
+  // Replay the whole line's growth from scratch with a light ripple: a new garden (R), or the same
+  // one again (for recording).
+  const regrow = (now: number, fresh: boolean) => {
+    if (fresh) seed = newSeed()
+    plants.clear()
+    dyingPlants = []
+    fallers.length = 0
+    glyphs = live()
+    glyphs.forEach((g, i) => (g.birth = now + i * C.REGROW_RIPPLE_MS))
+    relayout()
+  }
+
+  // ---- Export -----------------------------------------------------------------
+  // The current frame with the active palette, without the caret or debug overlays.
+  const exportPNG = () =>
+    new Promise<Blob | null>((res) => {
+      draw(performance.now(), ctx, "png")
+      canvas.toBlob(res, "image/png") // snapshots now; the next frame redraws the caret
+    })
+
+  // Video: replay the current garden growing (same seed) and record the canvas, without the caret
+  // or overlays. MP4 (H.264) where the browser can record it, otherwise WebM.
+  let recorder: MediaRecorder | null = null
+  const videoType = () => (typeof MediaRecorder === "undefined" ? null : (C.RECORD_TYPES.find((t) => MediaRecorder.isTypeSupported(t)) ?? null))
+
+  const recordVideo = () =>
+    new Promise<{ blob: Blob; ext: string } | null>((res) => {
+      const type = videoType()
+      if (!type || recorder) return res(null)
+      regrow(performance.now(), false)
+      const stream = canvas.captureStream(C.RECORD_FPS)
+      const rec = new MediaRecorder(stream, { mimeType: type, videoBitsPerSecond: C.RECORD_BITRATE })
+      const chunks: Blob[] = []
+      rec.ondataavailable = (e) => e.data.size && chunks.push(e.data)
+      rec.onstop = () => {
+        recorder = null
+        stream.getTracks().forEach((t) => t.stop())
+        res({ blob: new Blob(chunks, { type: type.split(";")[0] }), ext: type.startsWith("video/mp4") ? "mp4" : "webm" })
+      }
+      recorder = rec
+      rec.start(250)
+      setTimeout(() => rec.state !== "inactive" && rec.stop(), C.RECORD_MS)
+    })
+
+  const stopRecording = () => {
+    if (recorder?.state === "recording") recorder.stop()
+  }
+
+  const exportSVG = async () => {
+    const rec = new SvgRecorder(canvas.width, canvas.height, vw, vh)
+    draw(performance.now(), rec as unknown as CanvasRenderingContext2D, "svg")
+    const fontCss = await embeddedFontCss(fontFamily())
+    return new Blob([rec.toString(fontCss)], { type: "image/svg+xml" })
   }
 
   const frame = (now: number) => {
@@ -357,7 +446,7 @@ export function createScene(canvas: HTMLCanvasElement, opts: { onFirstType: () =
 
     // Words are runs of live non-space glyphs; each grows one plant, letter by letter.
     let prev: Plant | null = null
-    for (let i = 0; i < act.length; ) {
+    for (let i = 0; i < act.length;) {
       if (isSpace(act[i].char)) {
         i++
         continue
@@ -393,7 +482,7 @@ export function createScene(canvas: HTMLCanvasElement, opts: { onFirstType: () =
     idleDrop(now)
     const tC = performance.now()
 
-    draw(now)
+    draw(now, ctx, recorder ? "png" : "screen") // recording: no caret or overlays
     const tD = performance.now()
     if (bsDebug && bsWatch) {
       const w = bsWatch
@@ -412,7 +501,9 @@ export function createScene(canvas: HTMLCanvasElement, opts: { onFirstType: () =
   }
 
   const onKey = (e: KeyboardEvent) => {
-    if (e.ctrlKey || e.metaKey || e.altKey) return
+    // Esc, Enter or Cmd/Ctrl+Backspace clear everything
+    const clearAll = e.key === "Escape" || e.key === "Enter" || (e.key === "Backspace" && (e.metaKey || e.ctrlKey))
+    if (!clearAll && (e.ctrlKey || e.metaKey || e.altKey)) return
     const now = performance.now()
     // toggles ignore auto-repeat; typing and Backspace handle every keydown, repeats included
     if (e.key === "Tab") {
@@ -424,15 +515,8 @@ export function createScene(canvas: HTMLCanvasElement, opts: { onFirstType: () =
     if (e.key === C.REGENERATE_KEY || e.key === C.LATTICE_PANEL_KEY || e.key === C.DEBUG_KEY || e.key === C.BACKSPACE_DEBUG_KEY || e.key === C.PALETTE_DEBUG_KEY) {
       e.preventDefault()
       if (e.repeat) return
-      if (e.key === C.REGENERATE_KEY) {
-        seed = newSeed()
-        plants.clear()
-        dyingPlants = []
-        glyphs = live()
-        // replay the whole line with a light ripple
-        glyphs.forEach((g, i) => (g.birth = now + i * 40))
-        relayout()
-      } else if (e.key === C.LATTICE_PANEL_KEY) panel = !panel
+      if (e.key === C.REGENERATE_KEY) regrow(now, true)
+      else if (e.key === C.LATTICE_PANEL_KEY) panel = !panel
       else if (e.key === C.PALETTE_DEBUG_KEY) paletteDebug = !paletteDebug
       else if (e.key === C.DEBUG_KEY) {
         debug = !debug
@@ -443,14 +527,14 @@ export function createScene(canvas: HTMLCanvasElement, opts: { onFirstType: () =
       }
       return
     }
-    if (e.key === "Backspace" || e.key === "Enter") {
+    if (e.key === "Backspace" || clearAll) {
       e.preventDefault()
       const act = live()
       if (!act.length) return
       lastKey = now
       const t = performance.now()
-      // Backspace: the last live glyph dies. Enter: every live glyph does, with the same wither.
-      const from = e.key === "Enter" ? 0 : act.length - 1
+      // Backspace: the last live glyph dies. Clear: every live glyph does, with the same wither.
+      const from = clearAll ? 0 : act.length - 1
       for (let i = act.length - 1; i >= from; i--) kill(act[i], act, i, now, e.timeStamp)
       capWithering(now)
       relayout()
@@ -477,9 +561,18 @@ export function createScene(canvas: HTMLCanvasElement, opts: { onFirstType: () =
   raf = requestAnimationFrame(frame)
   window.addEventListener("keydown", onKey)
   window.addEventListener("resize", onResize)
-  return () => {
-    cancelAnimationFrame(raf)
-    window.removeEventListener("keydown", onKey)
-    window.removeEventListener("resize", onResize)
+  return {
+    stop: () => {
+      cancelAnimationFrame(raf)
+      window.removeEventListener("keydown", onKey)
+      window.removeEventListener("resize", onResize)
+    },
+    exportPNG,
+    exportSVG,
+    recordVideo,
+    stopRecording,
+    videoExt: () => (videoType()?.startsWith("video/mp4") ? "mp4" : videoType() ? "webm" : null),
   }
 }
+
+export type Scene = ReturnType<typeof createScene>

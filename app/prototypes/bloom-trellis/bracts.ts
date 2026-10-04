@@ -23,17 +23,24 @@ export function blob(n: number, widthRatio: number, widest: number, roundness: n
   }
   // midpoint quadratics through the samples
   const path = new Path2D()
+  const f4 = (v: number) => +v.toFixed(4)
   const mid = (a: [number, number], b: [number, number]) => [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2] as const
   const m0 = mid(pts[pts.length - 1], pts[0])
   path.moveTo(m0[0], m0[1])
+  let d = `M${f4(m0[0])} ${f4(m0[1])}`
   for (let i = 0; i < pts.length; i++) {
     const a = pts[i]
     const m = mid(a, pts[(i + 1) % pts.length])
     path.quadraticCurveTo(a[0], a[1], m[0], m[1])
+    d += `Q${f4(a[0])} ${f4(a[1])} ${f4(m[0])} ${f4(m[1])}`
   }
   path.closePath()
+  pathData.set(path, d + "Z")
   return path
 }
+
+// SVG path data for each shape, so the SVG export can draw the same Path2Ds.
+export const pathData = new WeakMap<Path2D, string>()
 
 let leafPath: Path2D | null = null
 export const leafShape = () => (leafPath ??= blob(C.BRACT_POINTS, C.LEAF_WIDTH_RATIO, C.LEAF_WIDEST_AT, 0.9))

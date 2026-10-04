@@ -1,32 +1,41 @@
+import { LEAF, LEAF_DARK } from "./config"
+
 // Background / letter / vine palettes. Flowers and leaves never change with the palette.
 // The scene and the picker read one live `active` colour set at draw time, so switching never
 // regenerates anything: colours crossfade (linear RGB) over PALETTE_FADE_MS while the garden keeps
 // growing and swaying.
 
-export type Palette = { name: string; bg: string; letter: string; vine: string }
+export type Palette = { name: string; group: "dark" | "light"; bg: string; letter: string; vine: string }
 
+// Dark backgrounds with varied letter colours first; the light palettes are a second group,
+// set apart by a small gap in the picker.
 export const PALETTES: Palette[] = [
-  { name: "Garden Night", bg: "#12281d", letter: "#f6efe0", vine: "#c9a27a" },
-  { name: "Midnight", bg: "#0e1633", letter: "#f2efe6", vine: "#c9a27a" },
-  { name: "Ink", bg: "#0b0b0b", letter: "#f6efe0", vine: "#c9a27a" },
-  { name: "Plum", bg: "#2a1233", letter: "#f4e9dc", vine: "#d4b08a" },
-  { name: "Cobalt", bg: "#1d2f6f", letter: "#f6efe0", vine: "#d4b08a" },
-  { name: "Stucco", bg: "#efe6d6", letter: "#1f3a2b", vine: "#8a6a45" },
-  { name: "Sage", bg: "#c9d4bf", letter: "#1b2e22", vine: "#6f5436" },
-  { name: "Paper", bg: "#f7f3ea", letter: "#111111", vine: "#8a6a45" },
+  { name: "Garden Night", group: "dark", bg: "#12281d", letter: "#f6efe0", vine: "#c9a27a" },
+  { name: "Midnight Butter", group: "dark", bg: "#0e1633", letter: "#f3dd9a", vine: "#c9a27a" },
+  { name: "Plum Gold", group: "dark", bg: "#2a1233", letter: "#e8c872", vine: "#d4b08a" },
+  { name: "Cobalt Sand", group: "dark", bg: "#1d2f6f", letter: "#efd9b5", vine: "#d4b08a" },
+  { name: "Slate Ice", group: "dark", bg: "#1c2530", letter: "#cfe3f4", vine: "#c9a27a" },
+  { name: "Teal Mint", group: "dark", bg: "#0f2a26", letter: "#cfe6d6", vine: "#c9a27a" },
+  { name: "Espresso", group: "dark", bg: "#241710", letter: "#f1e3c8", vine: "#e0b98a" },
+  { name: "Stucco", group: "light", bg: "#efe6d6", letter: "#1f3a2b", vine: "#8a6a45" },
+  { name: "Sage", group: "light", bg: "#c9d4bf", letter: "#1b2e22", vine: "#6f5436" },
+  { name: "Paper", group: "light", bg: "#f7f3ea", letter: "#111111", vine: "#8a6a45" },
 ]
 
 export const DEFAULT_PALETTE = 0
 export const PALETTE_STORAGE_KEY = "bloom-palette" // stores the palette's name
 export const PALETTE_FADE_MS = 350
 // Derived colours
-export const LATTICE_MIX = 0.18 // lattice lines = letter mixed this far toward the bg (drawn opaque)
+export const LATTICE_MIX = 0.18 // lattice lines = letter mixed this far toward the bg...
+export const LATTICE_MAX_CONTRAST = 1.25 // ...pulled back toward the letter so lines never exceed this contrast with it
 export const LEAF_VEIN_ALPHA = 0.5 // leaf veins = bg at this alpha
 export const PANEL_ALPHA = 0.07 // the full-screen trellis panel = letter at this alpha
 export const PICKER_BORDER_ALPHA = 0.3 // picker pill border = letter at this alpha
 // Dev-only contrast warnings (WCAG ratio)
 export const MIN_LETTER_CONTRAST = 7
 export const MIN_VINE_CONTRAST = 2
+export const LEAF_CLASH_HUE_DEG = 40 // warn if the letter is within this hue of a leaf green...
+export const LEAF_CLASH_LIGHTNESS = 0.25 // ...and within this lightness of it
 
 type RGB = [number, number, number]
 const toRgb = (hex: string): RGB => {
@@ -69,7 +78,7 @@ function apply(t: number) {
   active.bg = css(bg)
   active.letter = css(letter)
   active.vine = css(vine)
-  active.lattice = css(lerp(letter, bg, LATTICE_MIX))
+  active.lattice = css(latticeColor(letter, bg))
   active.leafVein = css(bg, LEAF_VEIN_ALPHA)
   active.panel = css(letter, PANEL_ALPHA)
   active.letterAlpha = (a: number) => css(letter, a)
@@ -128,16 +137,46 @@ export const bootScript = () =>
 
 // ---- Contrast -----------------------------------------------------------------
 
-const lum = (hex: string) => {
-  const [r, g, b] = toRgb(hex).map((v) => {
+// (function declarations: apply() runs at module load, above these)
+function lumRgb(rgb: RGB) {
+  const [r, g, b] = rgb.map((v) => {
     const c = v / 255
     return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4
   })
   return 0.2126 * r + 0.7152 * g + 0.0722 * b
 }
-export const contrast = (a: string, b: string) => {
-  const [hi, lo] = [lum(a), lum(b)].sort((x, y) => y - x)
+function ratio(a: RGB, b: RGB) {
+  const [hi, lo] = [lumRgb(a), lumRgb(b)].sort((x, y) => y - x)
   return (hi + 0.05) / (lo + 0.05)
+}
+export const contrast = (a: string, b: string) => ratio(toRgb(a), toRgb(b))
+
+// Lattice lines: the letter mixed LATTICE_MIX toward the bg, or less if that would stand out
+// more than LATTICE_MAX_CONTRAST against the letter (same as clamping the line's alpha).
+function latticeColor(letter: RGB, bg: RGB): RGB {
+  let t = LATTICE_MIX
+  if (ratio(lerp(letter, bg, t), letter) > LATTICE_MAX_CONTRAST) {
+    let lo = 0
+    let hi = t
+    for (let i = 0; i < 14; i++) {
+      const mid = (lo + hi) / 2
+      if (ratio(lerp(letter, bg, mid), letter) > LATTICE_MAX_CONTRAST) hi = mid
+      else lo = mid
+    }
+    t = lo
+  }
+  return lerp(letter, bg, t)
+}
+
+function hsl([r, g, b]: RGB) {
+  const [R, G, B] = [r / 255, g / 255, b / 255]
+  const max = Math.max(R, G, B)
+  const min = Math.min(R, G, B)
+  const l = (max + min) / 2
+  const d = max - min
+  if (!d) return { h: 0, s: 0, l }
+  const h = max === R ? ((G - B) / d + (G < B ? 6 : 0)) * 60 : max === G ? ((B - R) / d + 2) * 60 : ((R - G) / d + 4) * 60
+  return { h, s: d / (1 - Math.abs(2 * l - 1)), l }
 }
 
 function checkContrast(p: Palette) {
@@ -145,6 +184,14 @@ function checkContrast(p: Palette) {
   const vc = contrast(p.vine, p.bg)
   if (lc < MIN_LETTER_CONTRAST) console.warn(`[bloom-trellis] ${p.name}: letter/bg contrast ${lc.toFixed(2)} < ${MIN_LETTER_CONTRAST}`)
   if (vc < MIN_VINE_CONTRAST) console.warn(`[bloom-trellis] ${p.name}: vine/bg contrast ${vc.toFixed(2)} < ${MIN_VINE_CONTRAST}`)
+  // leaves sit on the letters: warn when the letter is a near-match for a leaf green
+  const L = hsl(toRgb(p.letter))
+  for (const leaf of [LEAF, LEAF_DARK]) {
+    const G = hsl(toRgb(leaf))
+    const dh = Math.min(Math.abs(L.h - G.h), 360 - Math.abs(L.h - G.h))
+    if (dh < LEAF_CLASH_HUE_DEG && Math.abs(L.l - G.l) < LEAF_CLASH_LIGHTNESS)
+      console.warn(`[bloom-trellis] ${p.name}: letter ${p.letter} is close to leaf ${leaf} (hue ${dh.toFixed(0)}°, lightness ${(Math.abs(L.l - G.l) * 100).toFixed(0)}%)`)
+  }
 }
 
 // Page-level colours outside the canvas: CSS variables for the page and picker, the body

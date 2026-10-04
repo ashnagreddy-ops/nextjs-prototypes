@@ -40,6 +40,14 @@ export const LATTICE_PANEL_DEFAULT = false
 export const DEBUG_KEY = "V" // Shift+V: vine skeletons by hierarchy + rejection counts in the console
 export const BACKSPACE_DEBUG_KEY = "K" // Shift+K: log backspace latency and slow frames
 export const PALETTE_DEBUG_KEY = "P" // Shift+P: every palette's letter, vine, leaf and bract samples over its bg
+export const REGROW_RIPPLE_MS = 40 // regrow / replay: each glyph restarts this much after the previous
+
+// ---- Video export ---------------------------------------------------------------
+// Replays the garden growing and records the canvas. First supported type wins.
+export const RECORD_TYPES = ["video/mp4;codecs=avc1.640028", "video/mp4;codecs=avc1", "video/mp4", "video/webm;codecs=vp9", "video/webm"]
+export const RECORD_MS = 9000 // long enough for stems, the arch and its bunch to finish
+export const RECORD_FPS = 60
+export const RECORD_BITRATE = 12_000_000
 export const BACKSPACE_WATCH_MS = 1000 // watch this long after each backspace
 export const BACKSPACE_SLOW_FRAME_MS = 20
 export const TYPEABLE = /^[ \p{L}\p{N}.,;:!?'"&@#%*+=/()\-]$/u // space separates words
@@ -56,7 +64,7 @@ export const FONT_MIN_PX = 28
 export const TRACKING_EM = -0.01 // letter spacing, x font size
 export const WORD_SPACE_EM = 0.12 // extra width added to each space
 export const LINE_HEIGHT_EM = 2.1 // room for the arch above and hanging bracts below
-export const BASELINE_IN_LINE = 0.6 // baseline position within a line box
+export const BASELINE_IN_LINE = 0.69 // baseline position within a line box: centres the letterforms (ascender to baseline) in it
 
 // Every size-dependent pixel value is authored at this font size and scaled by fs / REF_FONT_PX.
 // Plants are built in word coordinates at this size (origin: the word's first pen, baseline y = 0).
@@ -64,14 +72,15 @@ export const REF_FONT_PX = 200
 
 // ---- Caret ------------------------------------------------------------------
 export const CARET_WIDTH_PX = 3
-export const CARET_TOP_EM = 0.74 // above the baseline
-export const CARET_BOTTOM_EM = 0.06 // below the baseline
+export const CARET_TOP_EM = 0.8 // above the baseline (about the ascender top)
+export const CARET_BOTTOM_EM = 0.02 // below the baseline: centred on the letterforms, like the layout
 export const CARET_GAP_EM = 0.08 // after the last glyph's advance
 export const CARET_BLINK_MS = 530 // on / off half period
 export const CARET_SOLID_MS = 500 // stays solid this long after a key
 export const CARET_ALPHA = 0.85
 
 // ---- Trellis lattice --------------------------------------------------------
+export const LETTER_LATTICE = false // cut the diamond lattice into the letterforms (off: plain letters; the Shift+T panel still works)
 // Diamond lattice clipped to each glyph, in screen space so it lines up with the panel. Static.
 export const LATTICE_SPACING_EM = 0.1 // x layout font size
 export const LATTICE_WIDTH_PX = 1.5 // css px, not scaled

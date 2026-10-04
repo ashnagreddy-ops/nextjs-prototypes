@@ -6,3 +6,5 @@ export const setFont = (resolvedFamily: string, w: number) => {
   weight = w
 }
 export const fontFor = (fs: number) => `${weight} ${fs}px ${family}`
+export const fontFamily = () => family
+export const fontWeight = () => weight
