@@ -126,7 +126,7 @@ export function BloomTrellis() {
       <div
         role="radiogroup"
         aria-label="Palette"
-        className="absolute bottom-6 left-1/2 flex -translate-x-1/2 items-center gap-2 rounded-full border px-3 py-2"
+        className="absolute bottom-6 left-1/2 flex -translate-x-1/2 items-center gap-2 rounded-full border px-3 py-2 lg:right-6 lg:left-auto lg:translate-x-0"
         style={{ background: "var(--bloom-bg)", borderColor: ring }}
       >
         {PALETTES.map((p, i) => (
