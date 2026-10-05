@@ -104,85 +104,84 @@ export function BloomTrellis() {
       <p className={`pointer-events-none absolute inset-x-0 top-[74%] -translate-y-1/2 text-center font-serif text-sm italic transition-opacity duration-700 ${typed ? "opacity-0" : "opacity-60"}`}>
         type something · shift+T trellis
       </p>
-      {/* always-on shortcut hints, bottom left: above the palette pill on narrow screens, level with it
-          from lg (and clear of Next's dev badge in development) */}
-      <p
-        className={`pointer-events-none absolute bottom-20 flex h-10 items-center gap-1.5 font-serif text-sm italic opacity-60 lg:bottom-6 ${process.env.NODE_ENV === "development" ? "left-6 lg:left-20" : "left-6"}`}
-      >
-        {[
-          ["esc", "clear"],
-          ["tab", "palette"],
-          ["shift R", "regrow"],
-        ].map(([key, label], i) => (
-          <span key={key} className="flex items-center gap-1.5">
-            {i > 0 && <span aria-hidden className="mx-1">·</span>}
-            <kbd className="rounded border px-1.5 py-px font-sans text-xs not-italic" style={{ borderColor: ring }}>
-              {key}
-            </kbd>
-            {label}
-          </span>
-        ))}
-      </p>
-      <div
-        role="radiogroup"
-        aria-label="Palette"
-        className="absolute bottom-6 left-1/2 flex -translate-x-1/2 items-center gap-2 rounded-full border px-3 py-2 lg:right-6 lg:left-auto lg:translate-x-0"
-        style={{ background: "var(--bloom-bg)", borderColor: ring }}
-      >
-        {PALETTES.map((p, i) => (
-          <span key={p.name} className="contents">
-            {/* a small gap between the dark and light groups */}
-            {i > 0 && p.group !== PALETTES[i - 1].group && <span aria-hidden className="w-2" />}
+      {/* bottom bar: shortcut hints left, palette pill right; when they can't share a row the hints
+          wrap above the pill instead of overlapping it (and clear Next's dev badge in development) */}
+      <div className="pointer-events-none absolute inset-x-6 bottom-6 flex flex-row-reverse flex-wrap-reverse items-center gap-3">
+        <div role="radiogroup" aria-label="Palette" className="pointer-events-auto flex max-w-full flex-wrap items-center justify-center gap-2 rounded-3xl border px-3 py-2 sm:rounded-full" style={{ background: "var(--bloom-bg)", borderColor: ring }}>
+          {PALETTES.map((p, i) => (
+            <span key={p.name} className="contents">
+              {/* a small gap between the dark and light groups */}
+              {i > 0 && p.group !== PALETTES[i - 1].group && <span aria-hidden className="w-2" />}
+              <button
+                type="button"
+                role="radio"
+                aria-checked={i === current}
+                aria-label={p.name}
+                title={p.name}
+                tabIndex={-1}
+                // never take focus from typing (keys are read on window)
+                onPointerDown={(e) => e.preventDefault()}
+                onClick={() => setPalette(i)}
+                className={`grid size-6 place-items-center rounded-full transition-transform duration-150 hover:scale-[1.15] ${i === current ? "scale-110" : ""}`}
+                style={{
+                  background: p.bg,
+                  boxShadow: i === current ? "0 0 0 1.5px var(--bloom-letter)" : `inset 0 0 0 1px ${ring}`,
+                }}
+              >
+                <span className="size-2 rounded-full" style={{ background: p.letter }} />
+              </button>
+            </span>
+          ))}
+          <span aria-hidden className="mx-1 h-4 w-px" style={{ background: ring }} />
+          {(["png", "svg"] as const).map((kind) => (
+            <button
+              key={kind}
+              type="button"
+              aria-label={`Download ${kind.toUpperCase()}`}
+              title={`Download ${kind.toUpperCase()}`}
+              tabIndex={-1}
+              onPointerDown={(e) => e.preventDefault()}
+              onClick={() => download(kind)}
+              className="flex items-center gap-1 rounded-full px-1.5 text-xs font-medium tracking-wide uppercase opacity-70 transition-opacity hover:opacity-100"
+            >
+              <Download className="size-3.5" aria-hidden />
+              {kind}
+            </button>
+          ))}
+          {videoExt && (
             <button
               type="button"
-              role="radio"
-              aria-checked={i === current}
-              aria-label={p.name}
-              title={p.name}
+              aria-label={recording ? "Stop recording" : `Record the garden growing as ${videoExt.toUpperCase()}`}
+              title={recording ? "Stop recording" : `Record the garden growing as ${videoExt.toUpperCase()}`}
               tabIndex={-1}
-              // never take focus from typing (keys are read on window)
               onPointerDown={(e) => e.preventDefault()}
-              onClick={() => setPalette(i)}
-              className={`grid size-6 place-items-center rounded-full transition-transform duration-150 hover:scale-[1.15] ${i === current ? "scale-110" : ""}`}
-              style={{
-                background: p.bg,
-                boxShadow: i === current ? "0 0 0 1.5px var(--bloom-letter)" : `inset 0 0 0 1px ${ring}`,
-              }}
+              onClick={video}
+              className="flex items-center gap-1 rounded-full px-1.5 text-xs font-medium tracking-wide uppercase opacity-70 transition-opacity hover:opacity-100"
             >
-              <span className="size-2 rounded-full" style={{ background: p.letter }} />
+              {recording ? <span aria-hidden className="size-2 animate-pulse rounded-full" style={{ background: "var(--bloom-letter)" }} /> : <Video className="size-3.5" aria-hidden />}
+              {recording ? "stop" : videoExt}
             </button>
-          </span>
-        ))}
-        <span aria-hidden className="mx-1 h-4 w-px" style={{ background: ring }} />
-        {(["png", "svg"] as const).map((kind) => (
-          <button
-            key={kind}
-            type="button"
-            aria-label={`Download ${kind.toUpperCase()}`}
-            title={`Download ${kind.toUpperCase()}`}
-            tabIndex={-1}
-            onPointerDown={(e) => e.preventDefault()}
-            onClick={() => download(kind)}
-            className="flex items-center gap-1 rounded-full px-1.5 text-xs font-medium tracking-wide uppercase opacity-70 transition-opacity hover:opacity-100"
-          >
-            <Download className="size-3.5" aria-hidden />
-            {kind}
-          </button>
-        ))}
-        {videoExt && (
-          <button
-            type="button"
-            aria-label={recording ? "Stop recording" : `Record the garden growing as ${videoExt.toUpperCase()}`}
-            title={recording ? "Stop recording" : `Record the garden growing as ${videoExt.toUpperCase()}`}
-            tabIndex={-1}
-            onPointerDown={(e) => e.preventDefault()}
-            onClick={video}
-            className="flex items-center gap-1 rounded-full px-1.5 text-xs font-medium tracking-wide uppercase opacity-70 transition-opacity hover:opacity-100"
-          >
-            {recording ? <span aria-hidden className="size-2 animate-pulse rounded-full" style={{ background: "var(--bloom-letter)" }} /> : <Video className="size-3.5" aria-hidden />}
-            {recording ? "stop" : videoExt}
-          </button>
-        )}
+          )}
+        </div>
+        <p className={`pointer-events-none mr-auto flex h-10 items-center gap-1.5 font-serif text-sm italic opacity-60 ${process.env.NODE_ENV === "development" ? "sm:pl-14" : ""}`}>
+          {[
+            ["esc", "clear"],
+            ["tab", "palette"],
+            ["shift R", "regrow"],
+          ].map(([key, label], i) => (
+            <span key={key} className="flex items-center gap-1.5">
+              {i > 0 && (
+                <span aria-hidden className="mx-1">
+                  ·
+                </span>
+              )}
+              <kbd className="rounded border px-1.5 py-px font-sans text-xs not-italic" style={{ borderColor: ring }}>
+                {key}
+              </kbd>
+              {label}
+            </span>
+          ))}
+        </p>
       </div>
     </div>
   )
